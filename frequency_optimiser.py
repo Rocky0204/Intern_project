@@ -26,10 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 class FrequencyOptimiser:
-    def __init__(self, num_slots, slot_length, layover, solver_name="SCIP"):
+    def __init__(self, num_slots, slot_length, layover, solver_name="SCIP",
+                 min_demand_threshold=1.0, min_frequency_trips_per_period=1, min_frequency_period_minutes=60):
         self.num_slots = num_slots
         self.slot_length = slot_length
         self.layover_delay = layover
+        self.min_demand_threshold = min_demand_threshold
+        self.min_frequency_trips_per_period = min_frequency_trips_per_period
+        self.min_frequency_period_minutes = min_frequency_period_minutes
         self.demand = {}
         self.stops = []
         self.lookup_stops = {}
@@ -123,6 +127,11 @@ class FrequencyOptimiser:
         logger.info(f"Loaded {len(db_demand)} demand records.")
 
         for d in db_demand:
+            # Pre-filtering: Ignore demand below threshold
+            if d.count < self.min_demand_threshold:
+                # logger.debug(f"Skipping demand {d.origin}-{d.destination} count {d.count} as it's below threshold {self.min_demand_threshold}")
+                continue
+
             origin_sp_id = self.stop_area_to_stop_point.get(d.origin)
             destination_sp_id = self.stop_area_to_stop_point.get(d.destination)
 
@@ -158,30 +167,34 @@ class FrequencyOptimiser:
             if r_def.route_id in self.routes_definitions:
                 self.routes_definitions[r_def.route_id].append(r_def)
 
+        # Initialize these lists to hold values for each route
+        self.trip_length_on_route = [0] * len(self.routes)
+        self.trip_duration_in_slots = [0] * len(self.routes)
+        
         self.travel_times = {}
+        # Populate travel_times for segments (can be default if not in DB)
         for r_id in self.routes:
             route_def_list = self.routes_definitions.get(r_id, [])
             for i in range(len(route_def_list) - 1):
                 from_sp = route_def_list[i].stop_point_id
                 to_sp = route_def_list[i+1].stop_point_id
                 if (from_sp, to_sp) not in self.travel_times:
-                    self.travel_times[(from_sp, to_sp)] = 5
+                    self.travel_times[(from_sp, to_sp)] = 5 # Default travel time of 5 minutes
 
-        self.trip_length_on_route = []
-        self.trip_duration_in_slots = []
-
+        # Calculate trip lengths and durations per route
         for r_idx, route_id in enumerate(self.routes):
-            trip_length_minutes = 0
             route_def_list = self.routes_definitions.get(route_id, [])
-            for i in range(len(route_def_list) - 1):
-                from_stop_id = route_def_list[i].stop_point_id
-                to_stop_id = route_def_list[i + 1].stop_point_id
-                travel_time_minutes = self.travel_times.get((from_stop_id, to_stop_id), 0)
-                trip_length_minutes += travel_time_minutes
-            self.trip_length_on_route.append(trip_length_minutes)
+            current_route_trip_length_minutes = 0
+            if route_def_list: # Only calculate if route has definitions
+                for i in range(len(route_def_list) - 1):
+                    from_sp = route_def_list[i].stop_point_id
+                    to_sp = route_def_list[i+1].stop_point_id
+                    # Sum up travel times for each segment of the route
+                    current_route_trip_length_minutes += self.travel_times.get((from_sp, to_sp), 0)
 
-            total_trip_time_minutes = trip_length_minutes + self.layover_delay
-            self.trip_duration_in_slots.append(max(1, math.ceil(total_trip_time_minutes / self.slot_length)))
+            self.trip_length_on_route[r_idx] = current_route_trip_length_minutes
+            total_trip_time_minutes = current_route_trip_length_minutes + self.layover_delay
+            self.trip_duration_in_slots[r_idx] = max(1, math.ceil(total_trip_time_minutes / self.slot_length))
 
         self.route_coverage = [[0 for _ in self.stops] for _ in self.routes]
         for r_idx, route_id in enumerate(self.routes):
@@ -200,108 +213,180 @@ class FrequencyOptimiser:
     def optimise_frequencies(self, db: Session, start_time_minutes: int = 0):
         logger.info("Starting frequency optimization...")
 
-        if not self.routes or not self.bus_types or not self.stops or not self.demand:
-            logger.error("Missing data. Please ensure fit_data was successful and data exists.")
-            return
+        if not self.routes or not self.bus_types or not self.stops:
+            logger.error("Missing critical data (routes, bus types, or stops). Please ensure fit_data was successful and data exists.")
+            return {
+                "status": "ERROR",
+                "message": "Missing critical data for optimization.",
+                "total_passengers_served": 0,
+                "schedule": []
+            }
 
         rts = range(len(self.routes))
         bts = range(len(self.bus_types))
         ts = range(self.num_slots)
         ss = range(len(self.stops))
 
-        x = {}
+        x = {} # x[r, b, t] = number of buses of type b assigned to route r starting at time slot t
         for r_idx in rts:
             for b_idx in bts:
                 for t_idx in ts:
                     x[r_idx, b_idx, t_idx] = self.solver.IntVar(0, self.num_avl_buses.get(self.bus_types[b_idx], 0), f"x_{r_idx}_{b_idx}_{t_idx}")
 
+        # y[r_idx, i_idx, j_idx, t_start_idx, d_slot_idx] = passengers for demand from origin i_idx to dest j_idx, starting at d_slot_idx, served by route r_idx departing at t_start_idx
         y = {}
         for r_idx in rts:
-            for i_idx in ss:
-                for j_idx in ss:
+            route_def_list = self.routes_definitions.get(self.routes[r_idx], [])
+            if not route_def_list:
+                continue
+
+            for origin_sp_id, dest_demands in self.demand.items():
+                for destination_sp_id, slot_demands in dest_demands.items():
+                    try:
+                        i_idx = self.stops.index(origin_sp_id)
+                        j_idx = self.stops.index(destination_sp_id)
+                    except ValueError:
+                        continue # Should not happen if fit_data is correct
+
                     if i_idx == j_idx or self.route_coverage[r_idx][i_idx] == 0 or self.route_coverage[r_idx][j_idx] == 0:
                         continue
-                    for t_start_idx in ts:
-                        for s_idx in ts:
-                            if s_idx >= t_start_idx and s_idx < t_start_idx + self.trip_duration_in_slots[r_idx]:
-                                y[r_idx, i_idx, j_idx, t_start_idx, s_idx] = self.solver.NumVar(0, self.solver.infinity(), f"y_{r_idx}_{i_idx}_{j_idx}_{t_start_idx}_{s_idx}")
+                    
+                    # Ensure origin appears before destination on the route
+                    origin_seq = -1
+                    dest_seq = -1
+                    for rd in route_def_list:
+                        if rd.stop_point_id == origin_sp_id:
+                            origin_seq = rd.sequence
+                        if rd.stop_point_id == destination_sp_id:
+                            dest_seq = rd.sequence
+                    
+                    if not (0 <= origin_seq < dest_seq):
+                        continue # Route does not directly go from origin to destination in forward sequence
 
-        z = {}
+
+                    for d_slot_idx in slot_demands.keys(): # Loop over actual DEMAND START SLOTS
+                        for t_start_idx in ts: # Loop over ALL possible TRIP DEPARTURE SLOTS
+                            # Condition: A trip departing at t_start_idx can serve demand starting at d_slot_idx.
+                            # Assume a trip serves demand in its departure slot.
+                            if t_start_idx == d_slot_idx: # NEW CONDITION ADDED HERE
+                                y[r_idx, i_idx, j_idx, t_start_idx, d_slot_idx] = self.solver.NumVar(0, self.solver.infinity(), f"y_{r_idx}_{i_idx}_{j_idx}_{t_start_idx}_{d_slot_idx}")
+
+        z = {} # z[r, s] = total passengers on route r at time slot s (current passengers on board)
         for r_idx in rts:
-            for s_idx in ts:
-                z[r_idx, s_idx] = self.solver.NumVar(0, self.solver.infinity(), f"z_{r_idx}_{s_idx}")
+            for current_slot_idx in ts:
+                z[r_idx, current_slot_idx] = self.solver.NumVar(0, self.solver.infinity(), f"z_{r_idx}_{current_slot_idx}")
 
         obj = self.solver.Objective()
         for key, var in y.items():
-            r_idx, i_idx, j_idx, t_start_idx, s_idx = key
-            origin_sp_id = self.stops[i_idx]
-            destination_sp_id = self.stops[j_idx]
-            origin_area_code = self.stop_point_to_area_map.get(origin_sp_id)
-            destination_area_code = self.stop_point_to_area_map.get(destination_sp_id)
+            obj.SetCoefficient(var, 1)
+        
+        # Add a small penalty for each trip to encourage sparsity
+        TRIP_COST_PENALTY = 0.001 # A small value less than 1 passenger
+        for r_idx in rts:
+            for b_idx in bts:
+                for t_idx in ts:
+                    obj.SetCoefficient(x[r_idx, b_idx, t_idx], -TRIP_COST_PENALTY)
 
-            if origin_area_code is not None and destination_area_code is not None:
-                actual_demand_for_segment_slot = self.demand.get(origin_area_code, {}).get(destination_area_code, {}).get(s_idx, 0)
-                obj.SetCoefficient(var, actual_demand_for_segment_slot)
         obj.SetMaximization()
 
+        # Constraint 1: Capacity Constraint
         for r_idx in rts:
-            for t_idx in ts:
-                total_capacity_at_t = self.solver.Sum(
-                    x[r_idx, b_idx, start_slot_idx] * self.max_capacity[self.bus_types[b_idx]]
+            for current_slot_idx in ts: # This is the slot when passengers are ON THE BUS
+                total_capacity_at_current_slot = self.solver.Sum(
+                    x[r_idx, b_idx, t_start_idx] * self.max_capacity[self.bus_types[b_idx]]
                     for b_idx in bts
-                    for start_slot_idx in ts
-                    if start_slot_idx <= t_idx < start_slot_idx + self.trip_duration_in_slots[r_idx]
+                    for t_start_idx in ts # Trip's departure slot
+                    # A trip departing at t_start_idx is active at current_slot_idx
+                    if t_start_idx <= current_slot_idx < t_start_idx + self.trip_duration_in_slots[r_idx]
                 )
-                self.solver.Add(z[r_idx, t_idx] <= total_capacity_at_t, f"Capacity_R{r_idx}_T{t_idx}")
+                self.solver.Add(z[r_idx, current_slot_idx] <= total_capacity_at_current_slot, f"Capacity_R{r_idx}_CSlot{current_slot_idx}")
 
+        # Constraint 2: Demand Satisfaction Constraint
+        # Passengers served cannot exceed actual demand for any O-D pair at any demand start time slot
         for origin_sp_id, dest_demands in self.demand.items():
             for destination_sp_id, slot_demands in dest_demands.items():
-                for s_slot_idx, actual_demand in slot_demands.items():
+                for d_slot_idx, actual_demand in slot_demands.items(): # This d_slot_idx is the demand's start slot
                     try:
                         i_idx = self.stops.index(origin_sp_id)
                         j_idx = self.stops.index(destination_sp_id)
                     except ValueError:
                         continue
 
+                    # Sum of passengers served for this O-D pair and demand slot across all relevant routes and trip starts
+                    relevant_y_vars = []
                     for r_idx in rts:
+                        # Check if route covers O-D (already handled in y creation, but safety check)
                         if self.route_coverage[r_idx][i_idx] == 0 or self.route_coverage[r_idx][j_idx] == 0:
                             continue
+                        
+                        # Ensure origin appears before destination on the route
+                        route_def_list = self.routes_definitions.get(self.routes[r_idx], [])
+                        origin_seq = -1
+                        dest_seq = -1
+                        for rd in route_def_list:
+                            if rd.stop_point_id == origin_sp_id:
+                                origin_seq = rd.sequence
+                            if rd.stop_point_id == destination_sp_id:
+                                dest_seq = rd.sequence
+                        
+                        if not (0 <= origin_seq < dest_seq):
+                            continue # Route does not directly go from origin to destination in forward sequence
 
-                        relevant_y_vars = []
                         for t_start_idx in ts:
-                            if (r_idx, i_idx, j_idx, t_start_idx, s_slot_idx) in y:
-                                relevant_y_vars.append(y[r_idx, i_idx, j_idx, t_start_idx, s_slot_idx])
+                            if (r_idx, i_idx, j_idx, t_start_idx, d_slot_idx) in y: # Check if this specific y variable exists
+                                relevant_y_vars.append(y[r_idx, i_idx, j_idx, t_start_idx, d_slot_idx])
 
-                        if relevant_y_vars:
-                            self.solver.Add(
-                                self.solver.Sum(relevant_y_vars) <= actual_demand,
-                                f"DemandSat_R{r_idx}_S{origin_sp_id}to{destination_sp_id}_Slot{s_slot_idx}"
-                            )
+                    if relevant_y_vars: # Only add constraint if there are variables to sum
+                        self.solver.Add(
+                            self.solver.Sum(relevant_y_vars) <= actual_demand,
+                            f"DemandSat_SP{origin_sp_id}toSP{destination_sp_id}_DSlot{d_slot_idx}"
+                        )
 
+        # Constraint 3: Definition of Z (Total passengers on board)
         for r_idx in rts:
-            for s_idx in ts:
+            for current_slot_idx in ts: # This `current_slot_idx` is the time slot for which we are calculating total passengers ON BOARD
                 relevant_y_vars_for_z = []
                 for i_idx in ss:
                     for j_idx in ss:
                         if i_idx == j_idx:
                             continue
-                        for t_start_idx in ts:
-                            if (r_idx, i_idx, j_idx, t_start_idx, s_idx) in y:
-                                relevant_y_vars_for_z.append(y[r_idx, i_idx, j_idx, t_start_idx, s_idx])
+                        for t_start_idx in ts: # Trip departure slot
+                            # If a trip departs at t_start_idx and is active (carrying passengers) at current_slot_idx
+                            if t_start_idx <= current_slot_idx < t_start_idx + self.trip_duration_in_slots[r_idx]:
+                                # Then, any passengers served by this trip from any demand slot (d_slot_idx)
+                                # will be on board at current_slot_idx.
+                                # IMPORTANT: Now d_slot_idx MUST be equal to t_start_idx for y to exist based on the new y creation logic.
+                                # So, we only need to consider y where d_slot_idx == t_start_idx
+                                d_slot_idx = t_start_idx # This implicitly enforces the new y creation rule here as well
+                                if (r_idx, i_idx, j_idx, t_start_idx, d_slot_idx) in y:
+                                    relevant_y_vars_for_z.append(y[r_idx, i_idx, j_idx, t_start_idx, d_slot_idx])
+
                 if relevant_y_vars_for_z:
                     self.solver.Add(
-                        z[r_idx, s_idx] == self.solver.Sum(relevant_y_vars_for_z),
-                        f"Z_Def_R{r_idx}_S{s_idx}"
+                        z[r_idx, current_slot_idx] == self.solver.Sum(relevant_y_vars_for_z),
+                        f"Z_Def_R{r_idx}_CSlot{current_slot_idx}"
                     )
                 else:
-                    self.solver.Add(z[r_idx, s_idx] == 0, f"Z_Def_R{r_idx}_S{s_idx}_NoY")
+                    self.solver.Add(z[r_idx, current_slot_idx] == 0, f"Z_Def_R{r_idx}_CSlot{current_slot_idx}_NoY")
 
-        for b_idx in bts:
-            bus_type_id = self.bus_types[b_idx]
-            self.solver.Add(
-                self.solver.Sum([x[r_idx, b_idx, t_idx] for r_idx in rts for t_idx in ts]) <= self.num_avl_buses.get(bus_type_id, 0),
-                f"GlobalBusAvailability_BType{bus_type_id}"
-            )
+        # Constraint 4: Minimum Frequency Constraint
+        min_freq_period_slots = math.ceil(self.min_frequency_period_minutes / self.slot_length)
+        if min_freq_period_slots <= 0:
+            logger.warning("Minimum frequency period is too small or invalid. Skipping min frequency constraint.")
+        else:
+            for r_idx in rts:
+                for period_start_slot in range(0, self.num_slots, min_freq_period_slots):
+                    period_end_slot = min(period_start_slot + min_freq_period_slots -1, self.num_slots - 1)
+
+                    trips_in_period = self.solver.Sum(
+                        x[r_idx, b_idx, t_idx]
+                        for b_idx in bts
+                        for t_idx in range(period_start_slot, period_end_slot + 1)
+                    )
+                    self.solver.Add(
+                        trips_in_period >= self.min_frequency_trips_per_period,
+                        f"MinFreq_R{r_idx}_Period{period_start_slot}-{period_end_slot}"
+                    )
 
         logger.info("Solving optimization problem...")
         status = self.solver.Solve()
@@ -318,11 +403,29 @@ class FrequencyOptimiser:
         status_name_str = solver_status_map.get(status, f"UNKNOWN STATUS ({status})")
         logger.info(f"Optimization run completed with status: {status_name_str}")
 
+        result = {
+            "status": status_name_str,
+            "total_passengers_served": 0,
+            "schedule": [],
+            "message": "Optimization completed.",
+            "solver_runtime_ms": self.solver.wall_time(),
+            "solver_iterations": self.solver.iterations()
+        }
+
         if status == pywraplp.Solver.OPTIMAL or status == pywraplp.Solver.FEASIBLE:
             logger.info("Optimization successful!.")
-            logger.info(f"Objective (Total passengers served): {int(self.solver.Objective().Value())}")
+            total_served = int(self.solver.Objective().Value())
+            # The objective value will now be (Passengers - Penalty * Trips).
+            # To get actual passengers, we need to manually sum y values.
+            actual_passengers_served = 0
+            for key, var in y.items():
+                if var.solution_value() > 0.5:
+                    actual_passengers_served += int(var.solution_value())
 
-            logger.info("Creating Vehicle journeys based on optimized frequencies.")
+            logger.info(f"Objective (Total passengers served): {actual_passengers_served}")
+            result["total_passengers_served"] = actual_passengers_served
+
+            logger.info("Creating Vehicle journeys and building structured schedule.")
 
             default_operator = db.query(Operator).filter_by(operator_code="OP1").first()
             if not default_operator:
@@ -342,15 +445,16 @@ class FrequencyOptimiser:
                     service_code="SVC1",
                     name="Optimized Service",
                     operator_id=default_operator.operator_id,
-                    line_id=default_line.line_id, # Added line_id here
+                    line_id=default_line.line_id,
                 )
                 db.add(default_service)
                 db.flush()
 
             if not default_operator or not default_line or not default_service:
                 logger.error("Default Operator, Line, or Service could not be created/found. Cannot create VehicleJourneys.")
+                result["message"] = "Error: Default entities not found/created for VJ generation."
                 db.rollback()
-                return
+                return result
 
             bus_counter_by_type = {bt_id: 0 for bt_id in self.bus_types}
 
@@ -364,13 +468,13 @@ class FrequencyOptimiser:
                         num_trips_to_assign = int(x[r_idx, b_idx, t_idx].solution_value())
 
                         for _ in range(num_trips_to_assign):
+                            bus_reg_num_assigned = None
                             if bus_counter_by_type[bus_type_id] < self.num_avl_buses.get(bus_type_id, 0):
                                 bus_reg_num_assigned = self.bus_ids_by_type[bus_type_id][bus_counter_by_type[bus_type_id]]
                                 bus_counter_by_type[bus_type_id] += 1
                             else:
-                                logger.warning(f"Not enough physical buses of type {b_name} available for all assigned trips on Route {r_name} at Slot {t_idx}. Max available: {self.num_avl_buses.get(bus_type_id, 0)}")
-                                break
-
+                                logger.warning(f"Not enough physical buses of type {b_name} available for all assigned trips on Route {r_name} at Slot {t_idx}. Max available: {self.num_avl_buses.get(bus_type_id, 0)}. Creating VJ without specific bus registration.")
+                                
                             jp_code = f"JP_CODE_{r_name}_T{t_idx}_B{b_name}_Trip{_}"
                             assigned_jp = db.query(JourneyPattern).filter_by(jp_code=jp_code).first()
                             if not assigned_jp:
@@ -381,7 +485,6 @@ class FrequencyOptimiser:
                                     service_id=default_service.service_id,
                                     line_id=default_line.line_id,
                                     operator_id=default_operator.operator_id,
-                                    direction="outbound"
                                 )
                                 db.add(assigned_jp)
                                 db.flush()
@@ -399,50 +502,90 @@ class FrequencyOptimiser:
 
                             departure_minutes = start_time_minutes + t_idx * self.slot_length
                             departure_time_obj = (datetime.min + timedelta(minutes=departure_minutes)).time()
+                            departure_time_str = departure_time_obj.strftime("%H:%M")
 
                             new_vj = VehicleJourney(
                                 departure_time=departure_time_obj,
-                                dayshift=1,
+                                dayshift=1, # Default to day shift
                                 jp_id=assigned_jp.jp_id,
                                 block_id=assigned_block.block_id,
                                 operator_id=default_operator.operator_id,
                                 line_id=default_line.line_id,
-                                service_id=default_service.service_id
+                                service_id=default_service.service_id,
                             )
                             db.add(new_vj)
 
-            db.commit()
-            logger.info("Vehicle journeys created based on optimized frequencies.")
+                            # Add to structured output
+                            result["schedule"].append({
+                                "route_id": route_id,
+                                "route_name": r_name,
+                                "bus_type_id": bus_type_id,
+                                "bus_type_name": b_name,
+                                "departure_time_slot": t_idx,
+                                "departure_time_minutes": departure_minutes,
+                                "departure_time_str": departure_time_str,
+                                "assigned_bus_reg_num": bus_reg_num_assigned,
+                                "trip_duration_minutes": self.trip_length_on_route[r_idx],
+                                "trip_duration_slots": self.trip_duration_in_slots[r_idx]
+                            })
 
-            for r_idx in rts:
-                r_name = self.route_objects[self.routes[r_idx]].name
-                for i_idx in ss:
-                    i_sp_id = self.stops[i_idx]
-                    i_stop_name = self.lookup_stops[i_sp_id].name
-                    for j_idx in ss:
-                        j_sp_id = self.stops[j_idx]
-                        j_stop_name = self.lookup_stops[j_sp_id].name
-                        if i_sp_id == j_sp_id:
-                            continue
-                        for t_start_idx in ts:
-                            for s_idx in ts:
-                                if (r_idx, i_idx, j_idx, t_start_idx, s_idx) in y:
-                                    if y[r_idx, i_idx, j_idx, t_start_idx, s_idx].solution_value() > 0.5:
-                                        logger.info(
-                                            f"  Route {r_name}, {i_stop_name} -> {j_stop_name}, slot {s_idx} "
-                                            f"from bus starting at {t_start_idx}: {int(y[r_idx, i_idx, j_idx, t_start_idx, s_idx].solution_value())} passengers"
-                                        )
+            db.commit()
+            logger.info("Vehicle journeys created and structured schedule built.")
+
+            # Log detailed passenger service per segment
+            for key, var in y.items():
+                r_idx, i_idx, j_idx, t_start_idx, d_slot_idx = key
+                served_passengers = var.solution_value()
+                if served_passengers > 0.5: # Use 0.5 threshold for floating point solutions
+                    r_name = self.route_objects[self.routes[r_idx]].name
+                    i_stop_name = self.lookup_stops[self.stops[i_idx]].name
+                    j_stop_name = self.lookup_stops[self.stops[j_idx]].name
+                    logger.info(
+                        f"  Route {r_name}, {i_stop_name} -> {j_stop_name}, Demand Slot {d_slot_idx} "
+                        f"(served by trip starting at {t_start_idx}): {int(served_passengers)} passengers"
+                    )
         else:
             logger.warning("No optimal or feasible solution found for frequency optimization.")
+            result["message"] = "Optimization failed to find an optimal or feasible solution."
+            db.rollback() # Rollback any partial changes if not optimal/feasible
+
+        return result
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     try:
-        optimiser = FrequencyOptimiser(num_slots=24, slot_length=60, layover=10)
+        # Configuration for the optimizer
+        optimiser = FrequencyOptimiser(
+            num_slots=24,
+            slot_length=60,
+            layover=10,
+            min_demand_threshold=1.0,
+            min_frequency_trips_per_period=1,     # Relaxed: At least 1 trip
+            min_frequency_period_minutes=24 * 60  # Relaxed: Over the entire day (1440 minutes)
+        )
         with next(get_db()) as db:
             optimiser.fit_data(db, start_time_minutes=0)
-            optimiser.optimise_frequencies(db, start_time_minutes=0)
+            optimisation_results = optimiser.optimise_frequencies(db, start_time_minutes=0)
+
+            # Print the structured results
+            print("\n--- Optimization Results Summary ---")
+            print(f"Status: {optimisation_results['status']}")
+            print(f"Total Passengers Served: {optimisation_results['total_passengers_served']}")
+            print(f"Message: {optimisation_results['message']}")
+            print(f"Solver Runtime (ms): {optimisation_results['solver_runtime_ms']}")
+            print(f"Solver Iterations: {optimisation_results['solver_iterations']}")
+            print("\n--- Scheduled Trips ---")
+            if optimisation_results['schedule']:
+                for i, trip in enumerate(optimisation_results['schedule']):
+                    print(f"  Trip {i+1}: Route {trip['route_name']} ({trip['route_id']}), "
+                          f"Bus Type: {trip['bus_type_name']} ({trip['bus_type_id']}), "
+                          f"Departure: {trip['departure_time_str']} (Slot {trip['departure_time_slot']}), "
+                          f"Assigned Bus: {trip['assigned_bus_reg_num'] if trip['assigned_bus_reg_num'] else 'N/A'}")
+            else:
+                print("  No trips scheduled.")
+            print("------------------------------------\n")
+
 
     except Exception as e:
         logger.error(f"An error occurred during optimization: {e}")

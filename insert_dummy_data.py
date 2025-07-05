@@ -1,4 +1,3 @@
-# insert_dummy_data.py
 import logging
 from datetime import time
 from sqlalchemy.orm import Session
@@ -18,7 +17,7 @@ from api.models import (
     Block,
     JourneyPattern,
     Service,
-    Garage, # Ensure Garage is imported here
+    Garage,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -39,13 +38,14 @@ def insert_data(db: Session):
     db.flush()
 
     # 3. BusType
-    # Corrected: Removed 'short_name' and 'speed_limit' as they are not in the BusType model
+    # Corrected: Removed 'short_name' and 'speed_limit' as they are not in the BusType model based on previous error
     bus_type_small = BusType(name="Small Bus", capacity=30)
     bus_type_large = BusType(name="Large Bus", capacity=60)
     db.add_all([bus_type_small, bus_type_large])
     db.flush()
 
     # 4. StopArea
+    # Assuming stop_area_code can be integer based on your current code.
     sa1 = StopArea(stop_area_code=1, admin_area_code="ADM1", name="Central Station", is_terminal=True)
     sa2 = StopArea(stop_area_code=2, admin_area_code="ADM2", name="Market Square", is_terminal=False)
     sa3 = StopArea(stop_area_code=3, admin_area_code="ADM3", name="Bus Depot", is_terminal=True)
@@ -53,14 +53,15 @@ def insert_data(db: Session):
     db.flush()
 
     # 5. StopPoint
+    # Assuming atco_code can be integer. Added sp4 for sa3.
     sp1 = StopPoint(atco_code=1001, name="Stop 1A", latitude=51.5074, longitude=0.1278, stop_area_code=sa1.stop_area_code)
     sp2 = StopPoint(atco_code=1002, name="Stop 1B", latitude=51.5080, longitude=0.1280, stop_area_code=sa1.stop_area_code)
     sp3 = StopPoint(atco_code=2001, name="Stop 2A", latitude=51.5100, longitude=0.1300, stop_area_code=sa2.stop_area_code)
-    db.add_all([sp1, sp2, sp3])
+    sp4 = StopPoint(atco_code=3001, name="Stop 3A", latitude=51.5200, longitude=0.1400, stop_area_code=sa3.stop_area_code) # Added StopPoint for StopArea 3
+    db.add_all([sp1, sp2, sp3, sp4])
     db.flush()
 
     # 6. Route
-    # Corrected: Removed 'route_code' as it is not in the Route model (route_id is auto-generated)
     route1 = Route(name="City Centre Loop", description="Loop through city centre", operator_id=op1.operator_id)
     route2 = Route(name="Suburban Link", description="Connects city to suburbs", operator_id=op1.operator_id)
     db.add_all([route1, route2])
@@ -69,9 +70,11 @@ def insert_data(db: Session):
     # 7. RouteDefinition
     rd1 = RouteDefinition(route_id=route1.route_id, sequence=1, stop_point_id=sp1.atco_code)
     rd2 = RouteDefinition(route_id=route1.route_id, sequence=2, stop_point_id=sp2.atco_code)
+    # Route 2 now explicitly includes sp4 (StopArea 3)
     rd3 = RouteDefinition(route_id=route2.route_id, sequence=1, stop_point_id=sp1.atco_code)
-    rd4 = RouteDefinition(route_id=route2.route_id, sequence=2, stop_point_id=sp3.atco_code)
-    db.add_all([rd1, rd2, rd3, rd4])
+    rd4 = RouteDefinition(route_id=route2.route_id, sequence=2, stop_point_id=sp4.atco_code) # Route through StopArea 3
+    rd5 = RouteDefinition(route_id=route2.route_id, sequence=3, stop_point_id=sp3.atco_code) # Continue to StopArea 2
+    db.add_all([rd1, rd2, rd3, rd4, rd5])
     db.flush()
 
     # 8. Line (requires operator_id)
@@ -118,10 +121,12 @@ if __name__ == "__main__":
         if os.path.exists("pluto.db"):
             os.remove("pluto.db")
             logger.info("Existing pluto.db removed.")
-        from api.database import engine # Ensure engine is imported for Base.metadata.create_all
-        from api.models import Base # Ensure Base is imported
-        Base.metadata.create_all(bind=engine) # Create tables before inserting data
+        
+        # This block should ONLY call insert_data, as create_db.py handles table creation.
+        from api.database import get_db
         with next(get_db()) as db:
             insert_data(db)
     except Exception as e:
-        logger.error(f"An error occurred during database setup: {e}")
+        logger.error(f"An error occurred during dummy data insertion: {e}")
+        import traceback
+        traceback.print_exc()
