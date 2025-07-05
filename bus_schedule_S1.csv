@@ -1,0 +1,147 @@
+Time (HH:MM),Time (minutes),Stop ID,Event Description,Passengers Onboard,Passengers Waiting at Stop,Passengers Boarded,Passengers Alighted,Direction,Status
+08:00,480,1001.0,Bus S1 initialized at depot,0,0,0,0,N/A,INITIALIZED
+15:58,958,1001.0,Ready at 1001 (Scheduled Departure),0,10,0,0,N/A,READY_AT_START
+15:58,958,1001.0,Start Route 1,0,0,0,0,N/A,AT_STOP
+15:59,959,,En Route (Remaining: 4.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:00,960,,En Route (Remaining: 3.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:01,961,,En Route (Remaining: 2.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:02,962,,En Route (Remaining: 1.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:03,963,,En Route (Remaining: 0.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:04,964,1002.0,Arrived At Stop,0,0,0,0,Outbound,AT_STOP
+16:05,965,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:06,966,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:07,967,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:08,968,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:09,969,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:10,970,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:11,971,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:12,972,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:13,973,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:14,974,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:15,975,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:16,976,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:17,977,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:18,978,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:19,979,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:20,980,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:21,981,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:22,982,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:23,983,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:24,984,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:25,985,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:26,986,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:27,987,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:28,988,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:29,989,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:30,990,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:31,991,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:32,992,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:33,993,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:34,994,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:35,995,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:36,996,,Dead Run En Route from 1002 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:36,996,1001.0,Arrived at next scheduled route start 1001 (Dead Run),0,10,0,0,N/A,AT_STOP_DEAD_RUN
+16:04,964,1001.0,Waiting for scheduled departure (16:36),0,10,0,0,N/A,WAITING
+16:36,996,1001.0,Start Route 2,0,0,0,0,N/A,AT_STOP
+16:37,997,,En Route (Remaining: 4.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:38,998,,En Route (Remaining: 3.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:39,999,,En Route (Remaining: 2.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:40,1000,,En Route (Remaining: 1.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:41,1001,,En Route (Remaining: 0.0 min),0,0,0,0,Outbound,EN_ROUTE
+16:42,1002,3001.0,Arrived At Stop,0,70,0,0,Outbound,AT_STOP
+16:43,1003,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:44,1004,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:45,1005,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:46,1006,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:47,1007,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:48,1008,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:49,1009,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:50,1010,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:51,1011,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:52,1012,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:53,1013,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:54,1014,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:55,1015,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:56,1016,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:57,1017,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:58,1018,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+16:59,1019,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:00,1020,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:01,1021,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:02,1022,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:03,1023,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:04,1024,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:05,1025,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:06,1026,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:07,1027,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:08,1028,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:09,1029,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:10,1030,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:11,1031,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:12,1032,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:13,1033,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:14,1034,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:15,1035,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:16,1036,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:17,1037,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:18,1038,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:19,1039,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:20,1040,,Dead Run En Route from 3001 to 1001,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:20,1040,1001.0,Arrived at next scheduled route start 1001 (Dead Run),0,10,0,0,N/A,AT_STOP_DEAD_RUN
+16:42,1002,1001.0,Waiting for scheduled departure (17:20),10,0,0,0,N/A,WAITING
+17:20,1040,1001.0,Start Route 1,10,0,0,0,N/A,AT_STOP
+17:21,1041,,En Route (Remaining: 4.0 min),10,0,0,0,Outbound,EN_ROUTE
+17:22,1042,,En Route (Remaining: 3.0 min),10,0,0,0,Outbound,EN_ROUTE
+17:23,1043,,En Route (Remaining: 2.0 min),10,0,0,0,Outbound,EN_ROUTE
+17:24,1044,,En Route (Remaining: 1.0 min),10,0,0,0,Outbound,EN_ROUTE
+17:25,1045,,En Route (Remaining: 0.0 min),10,0,0,0,Outbound,EN_ROUTE
+17:26,1046,1002.0,Arrived At Stop,10,0,0,0,Outbound,AT_STOP
+17:27,1047,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:28,1048,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:29,1049,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:30,1050,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:31,1051,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:32,1052,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:33,1053,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:34,1054,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:35,1055,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:36,1056,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:37,1057,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:38,1058,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:39,1059,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:40,1060,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:41,1061,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:42,1062,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:43,1063,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:44,1064,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:45,1065,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:46,1066,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:47,1067,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:48,1068,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:49,1069,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:50,1070,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:51,1071,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:52,1072,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:53,1073,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:54,1074,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:55,1075,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:56,1076,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:57,1077,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:58,1078,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+17:59,1079,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:00,1080,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:01,1081,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:02,1082,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:03,1083,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:04,1084,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:05,1085,,Dead Run En Route from 1002 to 1001,10,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+18:05,1085,1001.0,Arrived at next scheduled route start 1001 (Dead Run),10,0,0,0,N/A,AT_STOP_DEAD_RUN
+17:26,1046,1001.0,Waiting for scheduled departure (18:05),10,0,0,0,N/A,WAITING
+18:05,1085,1001.0,Start Route 2,10,0,0,0,N/A,AT_STOP
+18:06,1086,,En Route (Remaining: 4.0 min),10,0,0,0,Outbound,EN_ROUTE
+18:07,1087,,En Route (Remaining: 3.0 min),10,0,0,0,Outbound,EN_ROUTE
+18:08,1088,,En Route (Remaining: 2.0 min),10,0,0,0,Outbound,EN_ROUTE
+18:09,1089,,En Route (Remaining: 1.0 min),10,0,0,0,Outbound,EN_ROUTE
+18:10,1090,,En Route (Remaining: 0.0 min),10,0,0,0,Outbound,EN_ROUTE
+18:11,1091,3001.0,Arrived At Stop,10,70,0,0,Outbound,AT_STOP
+19:01,1141,1001.0,Returned to Depot 1001,10,0,0,0,N/A,AT_DEPOT

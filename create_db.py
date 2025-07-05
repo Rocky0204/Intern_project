@@ -4,11 +4,8 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Import necessary components from your API structure
 from api.database import DATABASE_URL, get_db, engine
 from api.models import Base
-
-# Import the function to insert dummy data
 from insert_dummy_data import insert_data
 
 logging.basicConfig(level=logging.INFO)
