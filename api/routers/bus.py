@@ -1,46 +1,63 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
-from api import schemas
 from api.database import get_db
 from api.models import Bus
+from api.schemas import BusCreate, BusRead, BusUpdate
 
-router = APIRouter(prefix="/api/bus", tags=["Bus"])
+router = APIRouter(prefix="/buses", tags=["buses"])
 
-
-@router.post("", response_model=schemas.BusRead)
-def create_bus(obj_in: schemas.BusCreate, db: Session = Depends(get_db)):
-    obj = Bus(**obj_in.model_dump())
-    db.add(obj)
+@router.post("/", response_model=BusRead)
+def create_bus(bus: BusCreate, db: Session = Depends(get_db)):
+    # Check if bus with same reg_num already exists
+    existing_bus = db.query(Bus).filter(Bus.reg_num == bus.reg_num).first()
+    if existing_bus:
+        raise HTTPException(status_code=400, detail="Bus with this registration number already exists")
+    
+    db_bus = Bus(**bus.model_dump())
+    db.add(db_bus)
     db.commit()
-    db.refresh(obj)
-    return obj
+    db.refresh(db_bus)
+    return db_bus
 
+@router.get("/", response_model=List[BusRead])
+def read_buses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    buses = db.query(Bus).offset(skip).limit(limit).all()
+    return buses
 
-@router.get("/{reg_num}", response_model=schemas.BusRead)
-def read_bus(reg_num: str, db: Session = Depends(get_db)):
-    obj = db.query(Bus).filter_by(reg_num=reg_num).first()
-    if not obj:
+@router.get("/{bus_id}", response_model=BusRead)
+def read_bus(bus_id: str, db: Session = Depends(get_db)):
+    db_bus = db.query(Bus).filter(Bus.bus_id == bus_id).first()
+    if db_bus is None:
         raise HTTPException(status_code=404, detail="Bus not found")
-    return obj
+    return db_bus
 
-
-@router.put("/{reg_num}", response_model=schemas.BusRead)
-def update_bus(reg_num: str, update: schemas.BusUpdate, db: Session = Depends(get_db)):
-    obj = db.query(Bus).filter_by(reg_num=reg_num).first()
-    if not obj:
+@router.put("/{bus_id}", response_model=BusRead)
+def update_bus(bus_id: str, bus: BusUpdate, db: Session = Depends(get_db)):
+    db_bus = db.query(Bus).filter(Bus.bus_id == bus_id).first()
+    if db_bus is None:
         raise HTTPException(status_code=404, detail="Bus not found")
-    for key, value in update.model_dump(exclude_unset=True).items():
-        setattr(obj, key, value)
+    
+    update_data = bus.model_dump(exclude_unset=True)
+    
+    # Handle the special case where registration_number in schema maps to reg_num in model
+    if 'registration_number' in update_data:
+        update_data['reg_num'] = update_data.pop('registration_number')
+    
+    for key, value in update_data.items():
+        setattr(db_bus, key, value)
+    
     db.commit()
-    db.refresh(obj)
-    return obj
+    db.refresh(db_bus)
+    return db_bus
 
-
-@router.delete("/{reg_num}", response_model=schemas.BusRead)
-def delete_bus(reg_num: str, db: Session = Depends(get_db)):
-    obj = db.query(Bus).filter_by(reg_num=reg_num).first()
-    if obj:
-        db.delete(obj)
-        db.commit()
-    return obj
+@router.delete("/{bus_id}")
+def delete_bus(bus_id: str, db: Session = Depends(get_db)):
+    db_bus = db.query(Bus).filter(Bus.bus_id == bus_id).first()
+    if db_bus is None:
+        raise HTTPException(status_code=404, detail="Bus not found")
+    
+    db.delete(db_bus)
+    db.commit()
+    return {"message": "Bus deleted successfully"}
