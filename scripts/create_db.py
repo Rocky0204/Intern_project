@@ -2,14 +2,12 @@
 import logging
 import os
 import sys
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from api.database import DATABASE_URL, get_db, engine
+from api.database import get_db, engine
 from api.models import Base
 from scripts.insert_dummy_data import insert_data  # Update path if needed
 
@@ -20,7 +18,7 @@ if __name__ == "__main__":
     try:
         # Set working directory to project root
         os.chdir(project_root)
-        
+
         # 1. Delete existing database file
         db_path = os.path.join(project_root, "pluto.db")
         if os.path.exists(db_path):

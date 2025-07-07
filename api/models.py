@@ -35,8 +35,8 @@ class StopPoint(Base):
     route_definitions: Mapped[list["RouteDefinition"]] = relationship(
         back_populates="stop_point"
     )
-    journey_pattern_definitions: Mapped[list["JourneyPatternDefinition"]] = relationship(
-        back_populates="stop_point"
+    journey_pattern_definitions: Mapped[list["JourneyPatternDefinition"]] = (
+        relationship(back_populates="stop_point")
     )
     stop_activities: Mapped[list["StopActivity"]] = relationship(
         back_populates="stop_point"
@@ -163,8 +163,8 @@ class JourneyPattern(Base):
     operator: Mapped["Operator"] = relationship(back_populates="journey_patterns")
     operator_id: Mapped[int] = mapped_column(ForeignKey("operator.operator_id"))
 
-    journey_pattern_definitions: Mapped[list["JourneyPatternDefinition"]] = relationship(
-        back_populates="journey_pattern"
+    journey_pattern_definitions: Mapped[list["JourneyPatternDefinition"]] = (
+        relationship(back_populates="journey_pattern")
     )
     vehicle_journeys: Mapped[list["VehicleJourney"]] = relationship(
         back_populates="journey_pattern"
@@ -174,12 +174,18 @@ class JourneyPattern(Base):
 class JourneyPatternDefinition(Base):
     __tablename__ = "journey_pattern_definition"
 
-    jp_id: Mapped[int] = mapped_column(ForeignKey("journey_pattern.jp_id"), primary_key=True)
+    jp_id: Mapped[int] = mapped_column(
+        ForeignKey("journey_pattern.jp_id"), primary_key=True
+    )
     sequence: Mapped[int] = mapped_column(primary_key=True)
 
-    journey_pattern: Mapped["JourneyPattern"] = relationship(back_populates="journey_pattern_definitions")
+    journey_pattern: Mapped["JourneyPattern"] = relationship(
+        back_populates="journey_pattern_definitions"
+    )
 
-    stop_point: Mapped["StopPoint"] = relationship(back_populates="journey_pattern_definitions")
+    stop_point: Mapped["StopPoint"] = relationship(
+        back_populates="journey_pattern_definitions"
+    )
     stop_point_id: Mapped[int] = mapped_column(ForeignKey("stop_point.atco_code"))
 
     arrival_time: Mapped[time]
@@ -189,7 +195,9 @@ class JourneyPatternDefinition(Base):
 class RouteDefinition(Base):
     __tablename__ = "route_definition"
 
-    route_id: Mapped[int] = mapped_column(ForeignKey("route.route_id"), primary_key=True)
+    route_id: Mapped[int] = mapped_column(
+        ForeignKey("route.route_id"), primary_key=True
+    )
     sequence: Mapped[int] = mapped_column(primary_key=True)
 
     route: Mapped["Route"] = relationship(back_populates="route_definitions")
@@ -210,7 +218,9 @@ class Block(Base):
     bus_type: Mapped["BusType"] = relationship(back_populates="blocks")
     bus_type_id: Mapped[int] = mapped_column(ForeignKey("bus_type.type_id"))
 
-    vehicle_journeys: Mapped[list["VehicleJourney"]] = relationship(back_populates="block")
+    vehicle_journeys: Mapped[list["VehicleJourney"]] = relationship(
+        back_populates="block"
+    )
 
 
 class VehicleJourney(Base):
@@ -220,7 +230,9 @@ class VehicleJourney(Base):
     departure_time: Mapped[time]
     dayshift: Mapped[int] = mapped_column(SmallInteger)
 
-    journey_pattern: Mapped["JourneyPattern"] = relationship(back_populates="vehicle_journeys")
+    journey_pattern: Mapped["JourneyPattern"] = relationship(
+        back_populates="vehicle_journeys"
+    )
     jp_id: Mapped[int] = mapped_column(ForeignKey("journey_pattern.jp_id"))
 
     block: Mapped["Block"] = relationship(back_populates="vehicle_journeys")
@@ -236,7 +248,9 @@ class VehicleJourney(Base):
     service: Mapped["Service"] = relationship(back_populates="vehicle_journeys")
     service_id: Mapped[int] = mapped_column(ForeignKey("service.service_id"))
 
-    stop_activities: Mapped[list["StopActivity"]] = relationship(back_populates="vehicle_journey")
+    stop_activities: Mapped[list["StopActivity"]] = relationship(
+        back_populates="vehicle_journey"
+    )
 
 
 class StopActivity(Base):
@@ -250,7 +264,9 @@ class StopActivity(Base):
     stop_point: Mapped["StopPoint"] = relationship(back_populates="stop_activities")
     stop_point_id: Mapped[int] = mapped_column(ForeignKey("stop_point.atco_code"))
 
-    vehicle_journey: Mapped["VehicleJourney"] = relationship(back_populates="stop_activities")
+    vehicle_journey: Mapped["VehicleJourney"] = relationship(
+        back_populates="stop_activities"
+    )
     vj_id: Mapped[int] = mapped_column(ForeignKey("vehicle_journey.vj_id"))
 
 

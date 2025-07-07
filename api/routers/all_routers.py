@@ -1,11 +1,10 @@
 # api/routers/all_routers.py
-from fastapi import APIRouter
 
 # Import all individual routers
 from . import (
     bus,
     bus_type,
-    block, # Ensure this is imported
+    block,  # Ensure this is imported
     demand,
     emulator_log,
     garage,
@@ -26,7 +25,7 @@ from . import (
 all_routers = [
     bus.router,
     bus_type.router,
-    block.router, # Ensure this router is included in the list
+    block.router,  # Ensure this router is included in the list
     demand.router,
     emulator_log.router,
     garage.router,

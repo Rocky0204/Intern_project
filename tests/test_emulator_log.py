@@ -15,13 +15,14 @@ TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
-    poolclass=StaticPool  # Maintains a single connection for all tests
+    poolclass=StaticPool,  # Maintains a single connection for all tests
 )
 
 # Create all tables before any tests run
 Base.metadata.create_all(bind=engine)
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 # Override the get_db dependency
 def override_get_db():
@@ -31,9 +32,11 @@ def override_get_db():
     finally:
         db.close()
 
+
 app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -43,6 +46,7 @@ def clean_db():
         db.commit()
     yield
     # No cleanup needed after test since we're using in-memory DB
+
 
 def test_create_emulator_log():
     response = client.post(
@@ -55,6 +59,7 @@ def test_create_emulator_log():
     assert "run_id" in data
     assert "started_at" in data
 
+
 def test_read_emulator_logs():
     # Create test data directly in DB to avoid API dependency
     with TestingSessionLocal() as db:
@@ -62,13 +67,14 @@ def test_read_emulator_logs():
         db.add(db_log)
         db.commit()
         db.refresh(db_log)
-    
+
     response = client.get("/emulator_logs/")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
     assert data[0]["status"] == RunStatus.RUNNING.value
+
 
 def test_read_single_emulator_log():
     # Create test data directly
@@ -78,12 +84,13 @@ def test_read_single_emulator_log():
         db.commit()
         db.refresh(db_log)
         run_id = db_log.run_id
-    
+
     response = client.get(f"/emulator_logs/{run_id}")
     assert response.status_code == 200
     data = response.json()
     assert data["run_id"] == run_id
     assert data["status"] == RunStatus.RUNNING.value
+
 
 def test_update_emulator_log():
     # Create test data directly
@@ -93,7 +100,7 @@ def test_update_emulator_log():
         db.commit()
         db.refresh(db_log)
         run_id = db_log.run_id
-    
+
     response = client.put(
         f"/emulator_logs/{run_id}",
         json={"status": RunStatus.COMPLETED.value},
@@ -101,6 +108,7 @@ def test_update_emulator_log():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == RunStatus.COMPLETED.value
+
 
 def test_delete_emulator_log():
     # Create test data directly
@@ -110,7 +118,7 @@ def test_delete_emulator_log():
         db.commit()
         db.refresh(db_log)
         run_id = db_log.run_id
-    
+
     response = client.delete(f"/emulator_logs/{run_id}")
     assert response.status_code == 200
     assert response.json() == {"message": "Emulator log deleted successfully"}
@@ -118,6 +126,7 @@ def test_delete_emulator_log():
     # Verify deletion
     response = client.get(f"/emulator_logs/{run_id}")
     assert response.status_code == 404
+
 
 def test_invalid_run_id():
     response = client.get("/emulator_logs/9999")

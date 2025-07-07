@@ -5,34 +5,43 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 
 from ..database import get_db
-from ..models import VehicleJourney, JourneyPattern, Block, Operator, Line, Service # Import VehicleJourney model and its dependencies
+from ..models import (
+    VehicleJourney,
+    JourneyPattern,
+    Block,
+    Operator,
+    Line,
+    Service,
+)  # Import VehicleJourney model and its dependencies
 from ..schemas import VehicleJourneyCreate, VehicleJourneyRead, VehicleJourneyUpdate
 
-router = APIRouter(
-    prefix="/vehicle_journeys",
-    tags=["vehicle_journeys"]
-)
+router = APIRouter(prefix="/vehicle_journeys", tags=["vehicle_journeys"])
 
-@router.post("/", response_model=VehicleJourneyRead, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/", response_model=VehicleJourneyRead, status_code=status.HTTP_201_CREATED
+)
 def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_db)):
     """
     Create a new vehicle journey.
     Requires existing jp_id, block_id, operator_id, line_id, and service_id.
     """
     # Check if jp_id exists
-    journey_pattern = db.query(JourneyPattern).filter(JourneyPattern.jp_id == vj.jp_id).first()
+    journey_pattern = (
+        db.query(JourneyPattern).filter(JourneyPattern.jp_id == vj.jp_id).first()
+    )
     if not journey_pattern:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"JourneyPattern with ID {vj.jp_id} not found."
+            detail=f"JourneyPattern with ID {vj.jp_id} not found.",
         )
-    
+
     # Check if block_id exists
     block = db.query(Block).filter(Block.block_id == vj.block_id).first()
     if not block:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Block with ID {vj.block_id} not found."
+            detail=f"Block with ID {vj.block_id} not found.",
         )
 
     # Check if operator_id exists
@@ -40,7 +49,7 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
     if not operator:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Operator with ID {vj.operator_id} not found."
+            detail=f"Operator with ID {vj.operator_id} not found.",
         )
 
     # Check if line_id exists
@@ -48,7 +57,7 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
     if not line:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Line with ID {vj.line_id} not found."
+            detail=f"Line with ID {vj.line_id} not found.",
         )
 
     # Check if service_id exists
@@ -56,7 +65,7 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
     if not service:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Service with ID {vj.service_id} not found."
+            detail=f"Service with ID {vj.service_id} not found.",
         )
 
     db_vj = VehicleJourney(**vj.model_dump())
@@ -69,16 +78,20 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Could not create vehicle journey due to a database integrity issue."
+            detail="Could not create vehicle journey due to a database integrity issue.",
         )
 
+
 @router.get("/", response_model=List[VehicleJourneyRead])
-def read_vehicle_journeys(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_vehicle_journeys(
+    skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+):
     """
     Retrieve a list of vehicle journeys.
     """
     vehicle_journeys = db.query(VehicleJourney).offset(skip).limit(limit).all()
     return vehicle_journeys
+
 
 @router.get("/{vj_id}", response_model=VehicleJourneyRead)
 def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
@@ -87,8 +100,11 @@ def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
     """
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found"
+        )
     return db_vj
+
 
 @router.put("/{vj_id}", response_model=VehicleJourneyRead)
 def update_vehicle_journey(
@@ -99,33 +115,45 @@ def update_vehicle_journey(
     """
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found"
+        )
+
     update_data = vj.model_dump(exclude_unset=True)
 
     # Check for existence of foreign key dependencies if they are being updated
     if "jp_id" in update_data:
-        journey_pattern = db.query(JourneyPattern).filter(JourneyPattern.jp_id == update_data["jp_id"]).first()
+        journey_pattern = (
+            db.query(JourneyPattern)
+            .filter(JourneyPattern.jp_id == update_data["jp_id"])
+            .first()
+        )
         if not journey_pattern:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"JourneyPattern with ID {update_data['jp_id']} not found."
+                detail=f"JourneyPattern with ID {update_data['jp_id']} not found.",
             )
-    
+
     if "block_id" in update_data:
-        block = db.query(Block).filter(Block.block_id == update_data["block_id"]).first()
+        block = (
+            db.query(Block).filter(Block.block_id == update_data["block_id"]).first()
+        )
         if not block:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Block with ID {update_data['block_id']} not found."
+                detail=f"Block with ID {update_data['block_id']} not found.",
             )
 
     if "operator_id" in update_data:
-        operator = db.query(Operator).filter(Operator.operator_id == update_data["operator_id"]).first()
+        operator = (
+            db.query(Operator)
+            .filter(Operator.operator_id == update_data["operator_id"])
+            .first()
+        )
         if not operator:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operator with ID {update_data['operator_id']} not found."
+                detail=f"Operator with ID {update_data['operator_id']} not found.",
             )
 
     if "line_id" in update_data:
@@ -133,20 +161,24 @@ def update_vehicle_journey(
         if not line:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Line with ID {update_data['line_id']} not found."
+                detail=f"Line with ID {update_data['line_id']} not found.",
             )
 
     if "service_id" in update_data:
-        service = db.query(Service).filter(Service.service_id == update_data["service_id"]).first()
+        service = (
+            db.query(Service)
+            .filter(Service.service_id == update_data["service_id"])
+            .first()
+        )
         if not service:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Service with ID {update_data['service_id']} not found."
+                detail=f"Service with ID {update_data['service_id']} not found.",
             )
 
     for field, value in update_data.items():
         setattr(db_vj, field, value)
-    
+
     try:
         db.commit()
         db.refresh(db_vj)
@@ -155,8 +187,9 @@ def update_vehicle_journey(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Could not update vehicle journey due to a database integrity issue."
+            detail="Could not update vehicle journey due to a database integrity issue.",
         )
+
 
 @router.delete("/{vj_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
@@ -165,8 +198,10 @@ def delete_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
     """
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle journey not found"
+        )
+
     try:
         db.delete(db_vj)
         db.commit()
@@ -175,5 +210,5 @@ def delete_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete vehicle journey due to existing dependencies (e.g., associated stop activities)."
+            detail="Cannot delete vehicle journey due to existing dependencies (e.g., associated stop activities).",
         )

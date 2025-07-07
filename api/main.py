@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 
-from api.database import engine
-from api.models import Base
 from api.routers.all_routers import all_routers
 
 # IMPORTANT: Base.metadata.create_all(bind=engine) should typically NOT be called

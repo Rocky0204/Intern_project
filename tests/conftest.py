@@ -2,7 +2,8 @@
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from api.models import *
 from api.database import *
 from api.main import app
+
 # Define the URL for an in-memory SQLite database for testing
 # This ensures that tests run against a fresh, temporary database each time
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -30,6 +32,7 @@ engine = create_engine(
 # This session will be used to interact with the test database
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(scope="function")
 def db_session():
     """
@@ -42,12 +45,13 @@ def db_session():
     # Get a new session for the test
     db = TestingSessionLocal()
     try:
-        yield db # Yield the session to the test function
+        yield db  # Yield the session to the test function
     finally:
         # Close the session after the test
         db.close()
         # Drop all tables to clean up the database for the next test
         Base.metadata.drop_all(bind=engine)
+
 
 @pytest.fixture(scope="function")
 def client_with_db(db_session):
@@ -56,6 +60,7 @@ def client_with_db(db_session):
     This fixture overrides the `get_db` dependency in the FastAPI app
     to ensure that all API calls during a test use the test database.
     """
+
     def override_get_db():
         """
         Dependency override function that yields the test database session.
@@ -65,7 +70,7 @@ def client_with_db(db_session):
         finally:
             # The session is closed by the db_session fixture's teardown,
             # but it's good practice to ensure it's handled here too if needed
-            pass # db_session fixture handles the close()
+            pass  # db_session fixture handles the close()
 
     # Override the get_db dependency in the FastAPI application
     app.dependency_overrides[get_db] = override_get_db

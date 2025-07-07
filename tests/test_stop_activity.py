@@ -1,20 +1,22 @@
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from datetime import time
 
-from api.main import app
 from api.models import (
-    StopArea, StopPoint, Operator, Line, Service, Route,
-    JourneyPattern, BusType, Block, VehicleJourney, StopActivity
-)
-from api.schemas import (
-    StopActivityCreate,
-    StopActivityRead,
-    StopActivityUpdate
+    StopArea,
+    StopPoint,
+    Operator,
+    Line,
+    Service,
+    Route,
+    JourneyPattern,
+    BusType,
+    Block,
+    VehicleJourney,
+    StopActivity,
 )
 
-from .conftest import client_with_db, db_session
+
 
 def setup_all_parent_entities(db_session: Session, index: int = 0):
     """
@@ -29,7 +31,10 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
     db_session.refresh(db_operator)
 
     # 2. Create Line
-    line_data = {"line_name": f"Line {200 + index}", "operator_id": db_operator.operator_id}
+    line_data = {
+        "line_name": f"Line {200 + index}",
+        "operator_id": db_operator.operator_id,
+    }
     db_line = Line(**line_data)
     db_session.add(db_line)
     db_session.commit()
@@ -40,7 +45,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
         "service_code": f"SVC{300 + index}",
         "name": f"Service {index}",
         "operator_id": db_operator.operator_id,
-        "line_id": db_line.line_id
+        "line_id": db_line.line_id,
     }
     db_service = Service(**service_data)
     db_session.add(db_service)
@@ -51,7 +56,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
     route_data = {
         "name": f"Route {400 + index}",
         "operator_id": db_operator.operator_id,
-        "description": f"Route desc {index}"
+        "description": f"Route desc {index}",
     }
     db_route = Route(**route_data)
     db_session.add(db_route)
@@ -65,7 +70,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
         "route_id": db_route.route_id,
         "service_id": db_service.service_id,
         "operator_id": db_operator.operator_id,
-        "name": f"JP {index}"
+        "name": f"JP {index}",
     }
     db_jp = JourneyPattern(**jp_data)
     db_session.add(db_jp)
@@ -83,7 +88,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
     block_data = {
         "name": f"Block {700 + index}",
         "operator_id": db_operator.operator_id,
-        "bus_type_id": db_bus_type.type_id
+        "bus_type_id": db_bus_type.type_id,
     }
     db_block = Block(**block_data)
     db_session.add(db_block)
@@ -98,7 +103,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
         "block_id": db_block.block_id,
         "operator_id": db_operator.operator_id,
         "line_id": db_line.line_id,
-        "service_id": db_service.service_id
+        "service_id": db_service.service_id,
     }
     db_vj = VehicleJourney(**vj_data)
     db_session.add(db_vj)
@@ -110,7 +115,7 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
         "stop_area_code": 8000 + index,
         "admin_area_code": f"SA{80 + index}",
         "name": f"Stop Area {index}",
-        "is_terminal": True
+        "is_terminal": True,
     }
     db_stop_area = StopArea(**stop_area_data)
     db_session.add(db_stop_area)
@@ -119,18 +124,18 @@ def setup_all_parent_entities(db_session: Session, index: int = 0):
 
     # 10. Create StopPoint
     stop_point_data = {
-        "atco_code": 9000 + index, # This will be the stop_point_id in StopActivity
+        "atco_code": 9000 + index,  # This will be the stop_point_id in StopActivity
         "name": f"Stop Point {index}",
         "latitude": 51.0 + (index * 0.001),
         "longitude": -0.5 + (index * 0.001),
-        "stop_area_code": db_stop_area.stop_area_code
+        "stop_area_code": db_stop_area.stop_area_code,
     }
     db_stop_point = StopPoint(**stop_point_data)
     db_session.add(db_stop_point)
     db_session.commit()
     db_session.refresh(db_stop_point)
 
-    return db_vj.vj_id, db_stop_point.atco_code # Return vj_id and stop_point_atco_code
+    return db_vj.vj_id, db_stop_point.atco_code  # Return vj_id and stop_point_atco_code
 
 
 def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
@@ -145,8 +150,8 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
         "activity_type": "boarding",
         "activity_time": "08:15:00",
         "pax_count": 5,
-        "atco_code": stop_point_atco_code, # Use atco_code for API interaction
-        "vj_id": vj_id
+        "atco_code": stop_point_atco_code,  # Use atco_code for API interaction
+        "vj_id": vj_id,
     }
 
     response = client_with_db.post("/stop_activities/", json=test_data_api)
@@ -162,12 +167,18 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
     assert "activity_id" in data
 
     # Verify creation by querying the database directly
-    db_activity = db_session.query(StopActivity).filter(
-        StopActivity.activity_id == data["activity_id"]
-    ).first()
+    db_activity = (
+        db_session.query(StopActivity)
+        .filter(StopActivity.activity_id == data["activity_id"])
+        .first()
+    )
     assert db_activity is not None
-    assert db_activity.stop_point_id == test_data_api["atco_code"] # Compare with atco_code from input
-    assert db_activity.activity_time == time.fromisoformat(test_data_api["activity_time"])
+    assert (
+        db_activity.stop_point_id == test_data_api["atco_code"]
+    )  # Compare with atco_code from input
+    assert db_activity.activity_time == time.fromisoformat(
+        test_data_api["activity_time"]
+    )
 
 
 def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
@@ -179,12 +190,18 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
 
     # Create activities for vj_id_1 using 'stop_point_id' for direct DB insertion
     act_data_1_1 = {
-        "activity_type": "boarding", "activity_time": time(9, 0, 0), "pax_count": 10,
-        "stop_point_id": stop_point_atco_code_1, "vj_id": vj_id_1
+        "activity_type": "boarding",
+        "activity_time": time(9, 0, 0),
+        "pax_count": 10,
+        "stop_point_id": stop_point_atco_code_1,
+        "vj_id": vj_id_1,
     }
     act_data_1_2 = {
-        "activity_type": "alighting", "activity_time": time(9, 5, 0), "pax_count": 5,
-        "stop_point_id": stop_point_atco_code_1 + 1, "vj_id": vj_id_1
+        "activity_type": "alighting",
+        "activity_time": time(9, 5, 0),
+        "pax_count": 5,
+        "stop_point_id": stop_point_atco_code_1 + 1,
+        "vj_id": vj_id_1,
     }
     db_session.add(StopActivity(**act_data_1_1))
     db_session.add(StopActivity(**act_data_1_2))
@@ -192,8 +209,11 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
 
     # Create activities for vj_id_2
     act_data_2_1 = {
-        "activity_type": "boarding", "activity_time": time(10, 0, 0), "pax_count": 15,
-        "stop_point_id": stop_point_atco_code_2, "vj_id": vj_id_2
+        "activity_type": "boarding",
+        "activity_time": time(10, 0, 0),
+        "pax_count": 15,
+        "stop_point_id": stop_point_atco_code_2,
+        "vj_id": vj_id_2,
     }
     db_session.add(StopActivity(**act_data_2_1))
     db_session.commit()
@@ -203,7 +223,7 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 3 # At least 3 activities created
+    assert len(data) >= 3  # At least 3 activities created
 
     # Test reading activities filtered by vj_id
     response_filtered = client_with_db.get(f"/stop_activities/?vj_id={vj_id_1}")
@@ -224,8 +244,11 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
 
     # Create the activity to be read
     act_data = {
-        "activity_type": "boarding", "activity_time": time(11, 0, 0), "pax_count": 20,
-        "stop_point_id": stop_point_atco_code, "vj_id": vj_id
+        "activity_type": "boarding",
+        "activity_time": time(11, 0, 0),
+        "pax_count": 20,
+        "stop_point_id": stop_point_atco_code,
+        "vj_id": vj_id,
     }
     db_activity = StopActivity(**act_data)
     db_session.add(db_activity)
@@ -253,8 +276,11 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
 
     # Create the activity to be updated
     original_act_data = {
-        "activity_type": "boarding", "activity_time": time(12, 0, 0), "pax_count": 25,
-        "stop_point_id": stop_point_atco_code, "vj_id": vj_id
+        "activity_type": "boarding",
+        "activity_time": time(12, 0, 0),
+        "pax_count": 25,
+        "stop_point_id": stop_point_atco_code,
+        "vj_id": vj_id,
     }
     db_activity = StopActivity(**original_act_data)
     db_session.add(db_activity)
@@ -267,11 +293,10 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "activity_type": "alighting",
         "activity_time": "12:05:00",
         "pax_count": 10,
-        "atco_code": stop_point_atco_code + 5 # Update stop_point_id via atco_code
+        "atco_code": stop_point_atco_code + 5,  # Update stop_point_id via atco_code
     }
     response = client_with_db.put(
-        f"/stop_activities/{activity_id}",
-        json=update_data_api
+        f"/stop_activities/{activity_id}", json=update_data_api
     )
     assert response.status_code == 200
     data = response.json()
@@ -284,12 +309,16 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
     assert data["atco_code"] == update_data_api["atco_code"]
 
     # Verify update by querying the database directly
-    updated_db_activity = db_session.query(StopActivity).filter(
-        StopActivity.activity_id == activity_id
-    ).first()
+    updated_db_activity = (
+        db_session.query(StopActivity)
+        .filter(StopActivity.activity_id == activity_id)
+        .first()
+    )
     assert updated_db_activity is not None
     assert updated_db_activity.activity_type == update_data_api["activity_type"]
-    assert updated_db_activity.activity_time == time.fromisoformat(update_data_api["activity_time"])
+    assert updated_db_activity.activity_time == time.fromisoformat(
+        update_data_api["activity_time"]
+    )
     assert updated_db_activity.pax_count == update_data_api["pax_count"]
     assert updated_db_activity.stop_point_id == update_data_api["atco_code"]
 
@@ -302,8 +331,11 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
 
     # Create the activity to be deleted
     def_data = {
-        "activity_type": "boarding", "activity_time": time(13, 0, 0), "pax_count": 30,
-        "stop_point_id": stop_point_atco_code, "vj_id": vj_id
+        "activity_type": "boarding",
+        "activity_time": time(13, 0, 0),
+        "pax_count": 30,
+        "stop_point_id": stop_point_atco_code,
+        "vj_id": vj_id,
     }
     db_activity = StopActivity(**def_data)
     db_session.add(db_activity)
@@ -316,9 +348,11 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
     assert response.json()["message"] == "Stop activity deleted successfully"
 
     # Verify deletion by attempting to retrieve from the database
-    deleted_db_activity = db_session.query(StopActivity).filter(
-        StopActivity.activity_id == activity_id
-    ).first()
+    deleted_db_activity = (
+        db_session.query(StopActivity)
+        .filter(StopActivity.activity_id == activity_id)
+        .first()
+    )
     assert deleted_db_activity is None
 
     # Verify deletion by attempting to retrieve via API
