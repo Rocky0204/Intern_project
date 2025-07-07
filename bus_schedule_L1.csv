@@ -1,9 +1,67 @@
 Time,Event,Stop ID,Passengers Onboard,Passengers Waiting,Boarded,Alighted,Direction,Status
-08:00,Bus L1 initialized at depot,1001,0,0,0,0,N/A,INITIALIZED
-08:00,Start Route 2,1001,50,0,50,0,N/A,AT_STOP
-08:00,Departed 1001 towards 3001,1001,50,0,0,0,Outbound,EN_ROUTE_DEPARTURE
-08:05,Arrived At Stop 3001,3001,0,0,0,50,Outbound,AT_STOP
-08:05,Departed 3001 towards 2001,3001,0,0,0,0,Outbound,EN_ROUTE_DEPARTURE
-08:10,Arrived At Stop 2001,2001,0,0,0,0,Outbound,AT_STOP
-08:10,Returned to Depot 1001,1001,0,0,0,0,N/A,AT_DEPOT
-08:11,Idle,1001,0,0,0,0,N/A,IDLE
+08:00,Bus L1 initialized at depot,1001.0,0,0,0,0,N/A,INITIALIZED
+08:00,Start Route 2,1001.0,50,0,50,0,N/A,AT_STOP
+08:00,Departed 1001 towards 3001,1001.0,50,0,0,0,Outbound,EN_ROUTE_DEPARTURE
+08:05,Arrived At Stop 3001,3001.0,0,0,0,50,Outbound,AT_STOP
+08:05,Departed 3001 towards 2001,3001.0,0,0,0,0,Outbound,EN_ROUTE_DEPARTURE
+08:10,Arrived At Stop 2001,2001.0,0,0,0,0,Outbound,AT_STOP
+08:11,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:12,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:13,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:14,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:15,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:16,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:17,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:18,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:19,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:20,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:21,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:22,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:23,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:24,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:25,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:26,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:27,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:28,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:29,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:30,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:31,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:32,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:33,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:34,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:35,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:36,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:37,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:38,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:39,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:40,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:41,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:42,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:43,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:44,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:45,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:46,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:47,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:48,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:49,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:50,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:51,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:52,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:53,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:54,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:55,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:56,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:57,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:58,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+08:59,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+09:00,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+09:01,Dead Run En Route from 2001 to 1001,,0,0,0,0,N/A,EN_ROUTE_DEAD_RUN
+09:01,Arrived at next scheduled route start 1001 (Dead Run),1001.0,0,0,0,0,N/A,AT_STOP_DEAD_RUN
+08:10,Waiting for scheduled departure (09:01),1001.0,0,0,0,0,N/A,WAITING
+09:01,Start Route 2,1001.0,20,0,20,0,N/A,AT_STOP
+09:01,Departed 1001 towards 3001,1001.0,20,0,0,0,Outbound,EN_ROUTE_DEPARTURE
+09:06,Arrived At Stop 3001,3001.0,20,0,0,0,Outbound,AT_STOP
+09:06,Departed 3001 towards 2001,3001.0,20,0,0,0,Outbound,EN_ROUTE_DEPARTURE
+09:11,Arrived At Stop 2001,2001.0,0,0,0,20,Outbound,AT_STOP
+09:11,Returned to Depot 1001,1001.0,0,0,0,0,N/A,AT_DEPOT
+09:12,Idle,1001.0,0,0,0,0,N/A,IDLE

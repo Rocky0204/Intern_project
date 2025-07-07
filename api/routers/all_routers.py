@@ -19,6 +19,8 @@ from . import (
     stop_area,
     stop_point,
     vehicle_journey,
+    optimizer,
+    simulator,
 )
 
 # Create a list of all routers
@@ -40,4 +42,6 @@ all_routers = [
     stop_area.router,
     stop_point.router,
     vehicle_journey.router,
+    optimizer.router,
+    simulator.router,
 ]
