@@ -1,6 +1,6 @@
 # api/routers/optimizer.py
-
 import logging
+import json # Add json import
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -29,21 +29,16 @@ async def run_frequency_optimization(
     start_time_minutes: int = 0,
     db: Session = Depends(get_db)
 ):
-    """
-    Runs the bus frequency optimization.
-    """
     logger.info("API: Received request to run frequency optimization.")
 
-    # Create an initial log entry
     db_log_entry = EmulatorLog(
         status=RunStatus.RUNNING.value,
         started_at=datetime.now(),
-        last_updated=datetime.now()
+        last_updated=datetime.now(),
     )
     db.add(db_log_entry)
     db.commit()
     db.refresh(db_log_entry)
-    logger.info(f"API: Log entry created for optimization run_id: {db_log_entry.run_id}")
 
     try:
         optimiser = FrequencyOptimiser(
@@ -59,10 +54,15 @@ async def run_frequency_optimization(
         
         optimization_result = optimiser.optimise_frequencies(db, start_time_minutes=start_time_minutes)
         
-        # Debug logging
         logger.debug(f"Optimizer returned: {optimization_result}")
         
-        # Update status based on optimization result
+        # Store optimization_result as a JSON string
+        if isinstance(optimization_result, dict):
+            db_log_entry.optimization_details = json.dumps(optimization_result)
+        else:
+            db_log_entry.optimization_details = None # Or convert non-dict to string if appropriate
+
+
         if isinstance(optimization_result, dict) and optimization_result.get("status") in ["OPTIMAL", "FEASIBLE"]:
             db_log_entry.status = RunStatus.COMPLETED.value
             logger.info(f"API: Optimization run_id {db_log_entry.run_id} completed successfully.")
@@ -74,7 +74,24 @@ async def run_frequency_optimization(
         db.commit()
         db.refresh(db_log_entry)
         
-        return EmulatorLogRead.model_validate(db_log_entry)
+        # Manually parse optimization_details before returning to Pydantic for response_model validation
+        parsed_optimization_details = None
+        if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
+            try:
+                parsed_optimization_details = json.loads(db_log_entry.optimization_details)
+            except json.JSONDecodeError:
+                parsed_optimization_details = None # Treat invalid JSON as None
+
+        # Create a dictionary to pass to Pydantic for validation
+        log_data_for_pydantic = {
+            "run_id": db_log_entry.run_id,
+            "status": db_log_entry.status,
+            "started_at": db_log_entry.started_at,
+            "last_updated": db_log_entry.last_updated,
+            "optimization_details": parsed_optimization_details,
+        }
+        
+        return log_data_for_pydantic # Return the prepared dictionary
 
     except Exception as e:
         logger.exception(f"API: An error occurred during frequency optimization run_id {db_log_entry.run_id}: {e}")
@@ -82,7 +99,25 @@ async def run_frequency_optimization(
         db_log_entry.last_updated = datetime.now()
         db.commit()
         db.refresh(db_log_entry)
+        
+        # Ensure error response also handles optimization_details correctly
+        parsed_details_on_error = None
+        if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
+            try:
+                parsed_details_on_error = json.loads(db_log_entry.optimization_details)
+            except json.JSONDecodeError:
+                parsed_details_on_error = None
+        
+        error_log_data = {
+            "run_id": db_log_entry.run_id,
+            "status": db_log_entry.status,
+            "started_at": db_log_entry.started_at,
+            "last_updated": db_log_entry.last_updated,
+            "optimization_details": parsed_details_on_error,
+        }
+        # Raise HTTP exception with the correct response_model structure
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during optimization: {e}"
+            detail={"message": f"Optimization failed for run_id {db_log_entry.run_id}", "details": str(e)},
+            headers={"X-Content-Type-Options": "nosniff"} # Example header
         )

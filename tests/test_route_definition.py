@@ -1,245 +1,374 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from datetime import time
 
-from api.models import (
-    Route,
-    StopPoint,
-    RouteDefinition,
-    StopArea,
-)  # Import necessary models
+from api.models import Route, StopPoint, RouteDefinition
+import pytest
 
-# Import the client_with_db and db_session fixtures from conftest.py
-
-
-def setup_parent_entities(db_session: Session, index: int = 0):  # Added index parameter
-    """
-    Helper function to create necessary parent entities (Route, StopArea, StopPoint)
-    for RouteDefinition tests. Uses an index to ensure unique IDs.
-    """
-    # Create a StopArea first
-    stop_area_data = {
-        "stop_area_code": 9000 + index,  # Make unique using index
-        "admin_area_code": f"AA{90 + index}",  # Make unique using index
-        "name": f"Test Stop Area for Route Def {index}",
-        "is_terminal": True,
-    }
-    db_stop_area = StopArea(**stop_area_data)
-    db_session.add(db_stop_area)
-    db_session.commit()
-    db_session.refresh(db_stop_area)
-
-    # Create a StopPoint
-    stop_point_data = {
-        "atco_code": 10001 + index,  # Make unique using index
-        "name": f"Test Stop Point for Route Def {index}",
-        "latitude": 51.5 + (index * 0.001),  # Slightly vary latitude for uniqueness
-        "longitude": -0.1 + (index * 0.001),  # Slightly vary longitude for uniqueness
-        "stop_area_code": db_stop_area.stop_area_code,
-    }
-    db_stop_point = StopPoint(**stop_point_data)
-    db_session.add(db_stop_point)
-    db_session.commit()
-    db_session.refresh(db_stop_point)
-
-    # Create a Route
-    route_data = {
-        "name": f"Test Route for Definition {index}",
-        "operator_id": 1,  # Assuming operator_id 1 exists or is not strictly validated
-        "description": f"A test route {index}",
-    }
-    db_route = Route(**route_data)
-    db_session.add(db_route)
-    db_session.commit()
-    db_session.refresh(db_route)
-
-    return (
-        db_route.route_id,
-        db_stop_point.atco_code,
-    )  # Return route_id and stop_point_id
+# Assuming client_with_db and db_session are provided by conftest.py
 
 
 def test_create_route_definition(client_with_db: TestClient, db_session: Session):
     """
     Tests the creation of a new route definition via the API.
-    Handles the 'stop_point_atco_code' vs 'stop_point_id' mapping.
     """
-    route_id, stop_point_atco_code = setup_parent_entities(
-        db_session, index=0
-    )  # Pass index
+    # Create required parent objects in the database
+    route_data = {"name": "Test Route for RD", "operator_id": 1}
+    db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
+    if not db_route:
+        db_route = Route(**route_data)
+        db_session.add(db_route)
+        db_session.commit()
+        db_session.refresh(db_route)
+    route_id = db_route.route_id
 
-    # Data to send to the FastAPI endpoint (uses stop_point_atco_code as per schema)
-    test_data_api = {
+    stop_point_data = {
+        "atco_code": 100001,
+        "name": "Test Stop Point RD",
+        "latitude": 51.5,
+        "longitude": 0.1,
+        "stop_area_code": 1,
+    }
+    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    if not db_stop_point:
+        db_stop_point = StopPoint(**stop_point_data)
+        db_session.add(db_stop_point)
+        db_session.commit()
+        db_session.refresh(db_stop_point)
+    stop_point_id = db_stop_point.atco_code
+
+
+    test_data = {
         "route_id": route_id,
-        "stop_point_atco_code": stop_point_atco_code,  # Use stop_point_atco_code for API interaction
+        "stop_point_id": stop_point_id, # Use stop_point_id
         "sequence": 1,
     }
 
-    response = client_with_db.post("/route_definitions/", json=test_data_api)
-    assert response.status_code == 200
-    data = response.json()
+    response = client_with_db.post("/route_definitions/", json=test_data)
+    assert response.status_code == 201 # Expect 201 Created
 
-    # Assertions on the API response (will contain stop_point_atco_code)
-    assert data["route_id"] == test_data_api["route_id"]
-    assert data["sequence"] == test_data_api["sequence"]
-    assert data["stop_point_atco_code"] == test_data_api["stop_point_atco_code"]
+    response_data = response.json()
+    assert response_data["route_id"] == route_id
+    assert response_data["stop_point_id"] == stop_point_id
+    assert response_data["sequence"] == 1
 
-    # Verify creation by querying the database directly
-    # When querying the DB directly, the model uses 'stop_point_id'.
-    db_def = (
+    # Verify directly from the database
+    db_definition = (
         db_session.query(RouteDefinition)
-        .filter(RouteDefinition.route_id == route_id, RouteDefinition.sequence == 1)
+        .filter_by(
+            route_id=route_id,
+            stop_point_id=stop_point_id,
+            sequence=1
+        )
         .first()
     )
-    assert db_def is not None
-    assert (
-        db_def.stop_point_id == test_data_api["stop_point_atco_code"]
-    )  # Compare with atco_code from input
+    assert db_definition is not None
+    assert db_definition.route_id == route_id
+    assert db_definition.stop_point_id == stop_point_id
+    assert db_definition.sequence == 1
+
+    # Test for conflict (same primary keys)
+    response = client_with_db.post("/route_definitions/", json=test_data)
+    assert response.status_code == 409
 
 
 def test_read_route_definitions(client_with_db: TestClient, db_session: Session):
     """
-    Tests retrieving a list of route definitions, with and without filtering by route_id.
-    Ensures correct field names are used for direct DB insertion and API response assertion.
+    Tests retrieving all route definitions and filtering by route_id.
     """
-    route_id_1, stop_point_atco_code_1 = setup_parent_entities(
-        db_session, index=1
-    )  # Pass index 1
-    route_id_2, stop_point_atco_code_2 = setup_parent_entities(
-        db_session, index=2
-    )  # Pass index 2
+    # Create required parent objects in the database
+    route_data_1 = {"name": "Test Route All 1", "operator_id": 1}
+    db_route_1 = db_session.query(Route).filter_by(name=route_data_1["name"]).first()
+    if not db_route_1:
+        db_route_1 = Route(**route_data_1)
+        db_session.add(db_route_1)
+        db_session.commit()
+        db_session.refresh(db_route_1)
+    route_id_1 = db_route_1.route_id
 
-    # Create definitions for route_id_1 using 'stop_point_id' for direct DB insertion
-    def_data_1_1 = {
-        "route_id": route_id_1,
-        "stop_point_id": stop_point_atco_code_1,
-        "sequence": 1,
+    route_data_2 = {"name": "Test Route All 2", "operator_id": 1}
+    db_route_2 = db_session.query(Route).filter_by(name=route_data_2["name"]).first()
+    if not db_route_2:
+        db_route_2 = Route(**route_data_2)
+        db_session.add(db_route_2)
+        db_session.commit()
+        db_session.refresh(db_route_2)
+    route_id_2 = db_route_2.route_id
+
+    stop_point_data_1 = {
+        "atco_code": 100002,
+        "name": "Test Stop Point All 1",
+        "latitude": 51.6,
+        "longitude": 0.2,
+        "stop_area_code": 1,
     }
-    def_data_1_2 = {
-        "route_id": route_id_1,
-        "stop_point_id": stop_point_atco_code_1 + 1,
-        "sequence": 2,
-    }  # Use a different stop point for sequence 2
-    db_session.add(RouteDefinition(**def_data_1_1))
-    db_session.add(RouteDefinition(**def_data_1_2))
+    db_stop_point_1 = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_1["atco_code"]).first()
+    if not db_stop_point_1:
+        db_stop_point_1 = StopPoint(**stop_point_data_1)
+        db_session.add(db_stop_point_1)
+        db_session.commit()
+        db_session.refresh(db_stop_point_1)
+    stop_point_id_1 = db_stop_point_1.atco_code
+
+    stop_point_data_2 = {
+        "atco_code": 100003,
+        "name": "Test Stop Point All 2",
+        "latitude": 51.7,
+        "longitude": 0.3,
+        "stop_area_code": 1,
+    }
+    db_stop_point_2 = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_2["atco_code"]).first()
+    if not db_stop_point_2:
+        db_stop_point_2 = StopPoint(**stop_point_data_2)
+        db_session.add(db_stop_point_2)
+        db_session.commit()
+        db_session.refresh(db_stop_point_2)
+    stop_point_id_2 = db_stop_point_2.atco_code
+
+    # Create test definitions directly in the database
+    def_1 = RouteDefinition(route_id=route_id_1, stop_point_id=stop_point_id_1, sequence=1)
+    def_2 = RouteDefinition(route_id=route_id_1, stop_point_id=stop_point_id_2, sequence=2)
+    def_3 = RouteDefinition(route_id=route_id_2, stop_point_id=stop_point_id_1, sequence=1)
+    db_session.add_all([def_1, def_2, def_3])
     db_session.commit()
 
-    # Create definitions for route_id_2 using 'stop_point_id' for direct DB insertion
-    def_data_2_1 = {
-        "route_id": route_id_2,
-        "stop_point_id": stop_point_atco_code_2,
-        "sequence": 1,
-    }
-    db_session.add(RouteDefinition(**def_data_2_1))
-    db_session.commit()
-
-    # Test reading all definitions
+    # Test retrieving all definitions
     response = client_with_db.get("/route_definitions/")
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) >= 3  # At least 3 definitions created across two routes
+    assert len(data) >= 3 # At least the ones we added
 
-    # Test reading definitions filtered by route_id
-    response_filtered = client_with_db.get(f"/route_definitions/?route_id={route_id_1}")
-    assert response_filtered.status_code == 200
-    filtered_data = response_filtered.json()
-    assert isinstance(filtered_data, list)
-    assert len(filtered_data) == 2
-    assert all(d["route_id"] == route_id_1 for d in filtered_data)
-    assert any(d["sequence"] == 1 for d in filtered_data)
-    assert any(d["sequence"] == 2 for d in filtered_data)
-    # Assert on 'stop_point_atco_code' from the API response
-    assert filtered_data[0]["stop_point_atco_code"] == stop_point_atco_code_1
+    # Validate structure and types of returned data
+    for item in data:
+        assert "route_id" in item
+        assert "stop_point_id" in item
+        assert "sequence" in item
+        assert isinstance(item["route_id"], int)
+        assert isinstance(item["stop_point_id"], int)
+        assert isinstance(item["sequence"], int)
 
-
-def test_update_route_definition(client_with_db: TestClient, db_session: Session):
-    """
-    Tests updating an existing route definition.
-    Handles the 'stop_point_atco_code' vs 'stop_point_id' mapping.
-    """
-    route_id, stop_point_atco_code = setup_parent_entities(
-        db_session, index=3
-    )  # Pass index
-
-    # Create the definition to be updated (using 'stop_point_id' for direct DB insertion)
-    original_def_data = {
-        "route_id": route_id,
-        "stop_point_id": stop_point_atco_code,
-        "sequence": 1,
-    }
-    db_def = RouteDefinition(**original_def_data)
-    db_session.add(db_def)
-    db_session.commit()
-    db_session.refresh(db_def)
-    sequence = db_def.sequence
-
-    # Data for update via API (uses stop_point_atco_code as per schema)
-    update_data_api = {
-        "stop_point_atco_code": stop_point_atco_code + 10
-    }  # Use atco_code for API
-    response = client_with_db.put(
-        f"/route_definitions/{route_id}/{sequence}", json=update_data_api
-    )
+    # Test filtering by route_id
+    response = client_with_db.get(f"/route_definitions/?route_id={route_id_1}")
     assert response.status_code == 200
     data = response.json()
-
-    # Assertions on the API response (will contain stop_point_atco_code)
-    assert data["route_id"] == route_id
-    assert data["sequence"] == sequence
-    assert data["stop_point_atco_code"] == update_data_api["stop_point_atco_code"]
-
-    # Verify update by querying the database directly
-    updated_db_def = (
-        db_session.query(RouteDefinition)
-        .filter(
-            RouteDefinition.route_id == route_id, RouteDefinition.sequence == sequence
-        )
-        .first()
-    )
-    assert updated_db_def is not None
-    assert (
-        updated_db_def.stop_point_id == update_data_api["stop_point_atco_code"]
-    )  # Compare with atco_code from input
+    assert len(data) == 2
+    assert all(item["route_id"] == route_id_1 for item in data)
 
 
-def test_delete_route_definition(client_with_db: TestClient, db_session: Session):
+def test_read_single_route_definition(client_with_db: TestClient, db_session: Session):
     """
-    Tests deleting a route definition.
+    Tests retrieving a single route definition by its composite primary key.
     """
-    route_id, stop_point_atco_code = setup_parent_entities(
-        db_session, index=4
-    )  # Pass index
+    # Create required parent objects in the database
+    route_data = {"name": "Test Route Single", "operator_id": 1}
+    db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
+    if not db_route:
+        db_route = Route(**route_data)
+        db_session.add(db_route)
+        db_session.commit()
+        db_session.refresh(db_route)
+    route_id = db_route.route_id
 
-    # Create the definition to be deleted (using 'stop_point_id' for direct DB insertion)
+    stop_point_data = {
+        "atco_code": 100004,
+        "name": "Test Stop Point Single",
+        "latitude": 51.8,
+        "longitude": 0.4,
+        "stop_area_code": 1,
+    }
+    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    if not db_stop_point:
+        db_stop_point = StopPoint(**stop_point_data)
+        db_session.add(db_stop_point)
+        db_session.commit()
+        db_session.refresh(db_stop_point)
+    stop_point_id = db_stop_point.atco_code
+
+    # Create a test definition directly in the database
     def_data = {
         "route_id": route_id,
-        "stop_point_id": stop_point_atco_code,
+        "stop_point_id": stop_point_id,
         "sequence": 1,
     }
     db_def = RouteDefinition(**def_data)
     db_session.add(db_def)
     db_session.commit()
     db_session.refresh(db_def)
-    sequence = db_def.sequence
 
-    response = client_with_db.delete(f"/route_definitions/{route_id}/{sequence}")
+    response = client_with_db.get(
+        f"/route_definitions/{route_id}/{stop_point_id}/{db_def.sequence}"
+    )
     assert response.status_code == 200
-    assert response.json()["message"] == "Route definition deleted successfully"
+    data = response.json()
+    assert data["route_id"] == route_id
+    assert data["stop_point_id"] == stop_point_id
+    assert data["sequence"] == db_def.sequence
+
+    # Test for non-existent definition
+    response = client_with_db.get(
+        f"/route_definitions/{route_id}/{stop_point_id}/999"
+    )
+    assert response.status_code == 404
+
+
+def test_update_route_definition(client_with_db: TestClient, db_session: Session):
+    """
+    Tests updating an existing route definition.
+    """
+    # Create required parent objects in the database
+    route_data = {"name": "Test Route Update", "operator_id": 1}
+    db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
+    if not db_route:
+        db_route = Route(**route_data)
+        db_session.add(db_route)
+        db_session.commit()
+        db_session.refresh(db_route)
+    route_id = db_route.route_id
+
+    stop_point_data_orig = {
+        "atco_code": 100005,
+        "name": "Test Stop Point Update Orig",
+        "latitude": 51.9,
+        "longitude": 0.5,
+        "stop_area_code": 1,
+    }
+    db_stop_point_orig = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_orig["atco_code"]).first()
+    if not db_stop_point_orig:
+        db_stop_point_orig = StopPoint(**stop_point_data_orig)
+        db_session.add(db_stop_point_orig)
+        db_session.commit()
+        db_session.refresh(db_stop_point_orig)
+    stop_point_id_orig = db_stop_point_orig.atco_code
+
+    stop_point_data_new = {
+        "atco_code": 100006,
+        "name": "Test Stop Point Update New",
+        "latitude": 52.0,
+        "longitude": 0.6,
+        "stop_area_code": 1,
+    }
+    db_stop_point_new = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_new["atco_code"]).first()
+    if not db_stop_point_new:
+        db_stop_point_new = StopPoint(**stop_point_data_new)
+        db_session.add(db_stop_point_new)
+        db_session.commit()
+        db_session.refresh(db_stop_point_new)
+    stop_point_id_new = db_stop_point_new.atco_code
+
+    # Create the definition to be updated
+    def_data = {
+        "route_id": route_id,
+        "stop_point_id": stop_point_id_orig,
+        "sequence": 1,
+    }
+    db_def = RouteDefinition(**def_data)
+    db_session.add(db_def)
+    db_session.commit()
+    db_session.refresh(db_def)
+
+    # Update only stop_point_id
+    update_data = {"stop_point_id": stop_point_id_new}
+    response = client_with_db.put(
+        f"/route_definitions/{route_id}/{stop_point_id_orig}/{db_def.sequence}",
+        json=update_data,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["route_id"] == route_id
+    assert data["stop_point_id"] == stop_point_id_new
+    assert data["sequence"] == db_def.sequence
+
+    # Verify update directly from the database
+    updated_db_def = (
+        db_session.query(RouteDefinition)
+        .filter_by(
+            route_id=route_id,
+            stop_point_id=stop_point_id_new, # Use the new stop_point_id for retrieval
+            sequence=db_def.sequence
+        )
+        .first()
+    )
+    assert updated_db_def.stop_point_id == stop_point_id_new
+
+
+    # Test updating sequence
+    update_data_seq = {"sequence": 2}
+    response_seq = client_with_db.put(
+        f"/route_definitions/{route_id}/{stop_point_id_new}/{db_def.sequence}", # Use updated primary keys for path
+        json=update_data_seq,
+    )
+    assert response_seq.status_code == 200
+    data_seq = response_seq.json()
+    assert data_seq["sequence"] == 2
+
+
+    # Test for non-existent definition update
+    response = client_with_db.put(
+        f"/route_definitions/{route_id}/{stop_point_id_new}/999",
+        json={"sequence": 3},
+    )
+    assert response.status_code == 404
+
+
+def test_delete_route_definition(client_with_db: TestClient, db_session: Session):
+    """
+    Tests deleting a route definition.
+    """
+    # Create required parent objects in the database
+    route_data = {"name": "Test Route Delete", "operator_id": 1}
+    db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
+    if not db_route:
+        db_route = Route(**route_data)
+        db_session.add(db_route)
+        db_session.commit()
+        db_session.refresh(db_route)
+    route_id = db_route.route_id
+
+    stop_point_data = {
+        "atco_code": 100007,
+        "name": "Test Stop Point Delete",
+        "latitude": 52.1,
+        "longitude": 0.7,
+        "stop_area_code": 1,
+    }
+    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    if not db_stop_point:
+        db_stop_point = StopPoint(**stop_point_data)
+        db_session.add(db_stop_point)
+        db_session.commit()
+        db_session.refresh(db_stop_point)
+    stop_point_id = db_stop_point.atco_code
+
+    # Create the definition to be deleted
+    def_data = {
+        "route_id": route_id,
+        "stop_point_id": stop_point_id,
+        "sequence": 1,
+    }
+    db_def = RouteDefinition(**def_data)
+    db_session.add(db_def)
+    db_session.commit()
+    db_session.refresh(db_def)
+
+    response = client_with_db.delete(
+        f"/route_definitions/{route_id}/{stop_point_id}/{db_def.sequence}"
+    )
+    assert response.status_code == 204 # Expect 204 No Content for successful deletion
 
     # Verify deletion by attempting to retrieve from the database
     deleted_db_def = (
         db_session.query(RouteDefinition)
-        .filter(
-            RouteDefinition.route_id == route_id, RouteDefinition.sequence == sequence
+        .filter_by(
+            route_id=route_id,
+            stop_point_id=stop_point_id,
+            sequence=db_def.sequence
         )
         .first()
     )
     assert deleted_db_def is None
 
-    # Verify deletion by attempting to retrieve via API
-    response = client_with_db.get(f"/route_definitions/?route_id={route_id}")
-    assert response.status_code == 200
-    data = response.json()
-    assert (
-        len(data) == 0
-    )  # No definitions should be found for this route_id after deletion
+    # Test deleting a non-existent definition
+    response = client_with_db.delete(
+        f"/route_definitions/{route_id}/{stop_point_id}/999"
+    )
+    assert response.status_code == 404

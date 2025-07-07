@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+# api/routers/journey_pattern_definition.py
+from fastapi import APIRouter, Depends, HTTPException, status # Import status here
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import time # Ensure time is imported
 
-from ..database import get_db
-from ..models import (
-    JourneyPatternDefinition,
-)  # Assuming JourneyPatternDefinition is the correct model
-from ..schemas import (
+from api.database import get_db
+from api.models import JourneyPatternDefinition
+from api.schemas import (
     JourneyPatternDefinitionCreate,
     JourneyPatternDefinitionRead,
     JourneyPatternDefinitionUpdate,
@@ -19,66 +19,53 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=JourneyPatternDefinitionRead)
+@router.post("/", response_model=JourneyPatternDefinitionRead, status_code=status.HTTP_201_CREATED) # Add status_code here
 def create_journey_pattern_definition(
     definition: JourneyPatternDefinitionCreate, db: Session = Depends(get_db)
 ):
-    # Manually map schema fields to model fields for creation
-    # The schema uses 'stop_point_atco_code', but the model uses 'stop_point_id'
+    # Use getattr for robustness against unexpected missing attributes,
+    # though for required fields in Create schema, this is highly unusual if validation passes.
     db_definition = JourneyPatternDefinition(
-        jp_id=definition.jp_id,
-        stop_point_id=definition.stop_point_atco_code,  # Correctly map to model's 'stop_point_id'
-        sequence=definition.sequence,
-        arrival_time=definition.arrival_time,
-        departure_time=definition.departure_time,
+        jp_id=getattr(definition, 'jp_id'),
+        stop_point_id=getattr(definition, 'stop_point_atco_code'), # Map schema's 'stop_point_atco_code' to model's 'stop_point_id'
+        sequence=getattr(definition, 'sequence'),
+        arrival_time=getattr(definition, 'arrival_time'),
+        departure_time=getattr(definition, 'departure_time'),
     )
     db.add(db_definition)
     db.commit()
     db.refresh(db_definition)
 
-    # Return a dictionary that matches the response_model schema
-    # The schema expects 'stop_point_atco_code', so map model's 'stop_point_id' back
+    # Manually construct the response and explicitly format time objects to ISO 8601 strings
     return {
         "jp_id": db_definition.jp_id,
-        "stop_point_atco_code": db_definition.stop_point_id,  # Map model's 'stop_point_id' to schema's 'stop_point_atco_code'
+        "stop_point_atco_code": db_definition.stop_point_id,
         "sequence": db_definition.sequence,
-        "arrival_time": db_definition.arrival_time.isoformat(),  # Ensure time is ISO 8601 string for JSON response
-        "departure_time": db_definition.departure_time.isoformat(),  # Ensure time is ISO 8601 string for JSON response
+        "arrival_time": db_definition.arrival_time.isoformat(),
+        "departure_time": db_definition.departure_time.isoformat(),
     }
 
 
 @router.get("/", response_model=List[JourneyPatternDefinitionRead])
-def read_journey_pattern_definitions(
-    jp_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
-):
-    query = db.query(JourneyPatternDefinition)
-    if jp_id:
-        query = query.filter(JourneyPatternDefinition.jp_id == jp_id)
-    db_definitions = query.offset(skip).limit(limit).all()
-
-    # Manually map each SQLAlchemy object to a dictionary matching the schema
-    # This is necessary because of the 'stop_point_id' vs 'stop_point_atco_code' mismatch
-    # and to ensure time objects are serialized as strings.
-    response_list = []
-    for db_def in db_definitions:
-        response_list.append(
-            {
-                "jp_id": db_def.jp_id,
-                "stop_point_atco_code": db_def.stop_point_id,  # Map model's 'stop_point_id' to schema's 'stop_point_atco_code'
-                "sequence": db_def.sequence,
-                "arrival_time": db_def.arrival_time.isoformat(),
-                "departure_time": db_def.departure_time.isoformat(),
-            }
-        )
-    return response_list
+def read_journey_pattern_definitions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    definitions = db.query(JourneyPatternDefinition).offset(skip).limit(limit).all()
+    
+    # Manually construct list of dictionaries for the response model, formatting time
+    response_definitions = []
+    for db_def in definitions:
+        response_definitions.append({
+            "jp_id": db_def.jp_id,
+            "stop_point_atco_code": db_def.stop_point_id,
+            "sequence": db_def.sequence,
+            "arrival_time": db_def.arrival_time.isoformat(),
+            "departure_time": db_def.departure_time.isoformat(),
+        })
+    return response_definitions
 
 
-@router.put("/{jp_id}/{sequence}", response_model=JourneyPatternDefinitionRead)
-def update_journey_pattern_definition(
-    jp_id: int,
-    sequence: int,
-    definition: JourneyPatternDefinitionUpdate,
-    db: Session = Depends(get_db),
+@router.get("/{jp_id}/{sequence}", response_model=JourneyPatternDefinitionRead)
+def read_single_journey_pattern_definition(
+    jp_id: int, sequence: int, db: Session = Depends(get_db)
 ):
     db_definition = (
         db.query(JourneyPatternDefinition)
@@ -88,31 +75,57 @@ def update_journey_pattern_definition(
         )
         .first()
     )
-
     if db_definition is None:
-        raise HTTPException(
-            status_code=404, detail="Journey pattern definition not found"
-        )
+        raise HTTPException(status_code=404, detail="Journey pattern definition not found")
+    
+    # Manually construct the dictionary for the response model, formatting time
+    return {
+        "jp_id": db_definition.jp_id,
+        "stop_point_atco_code": db_definition.stop_point_id,
+        "sequence": db_definition.sequence,
+        "arrival_time": db_definition.arrival_time.isoformat(),
+        "departure_time": db_definition.departure_time.isoformat(),
+    }
 
-    # Update model fields, mapping from schema fields
-    if definition.stop_point_atco_code is not None:
-        db_definition.stop_point_id = (
-            definition.stop_point_atco_code
-        )  # Map schema's 'stop_point_atco_code' to model's 'stop_point_id'
-    if definition.sequence is not None:
-        db_definition.sequence = definition.sequence
-    if definition.arrival_time is not None:
-        db_definition.arrival_time = definition.arrival_time
-    if definition.departure_time is not None:
-        db_definition.departure_time = definition.departure_time
+
+@router.put("/{jp_id}/{sequence}", response_model=JourneyPatternDefinitionRead)
+def update_journey_pattern_definition(
+    jp_id: int,
+    sequence: int,
+    definition: JourneyPatternDefinitionUpdate,
+    db: Session = Depends(get_db)
+):
+    db_definition = (
+        db.query(JourneyPatternDefinition)
+        .filter(
+            JourneyPatternDefinition.jp_id == jp_id,
+            JourneyPatternDefinition.sequence == sequence,
+        )
+        .first()
+    )
+    if db_definition is None:
+        raise HTTPException(status_code=404, detail="Journey pattern definition not found")
+
+    # Use getattr to safely access optional attributes from the update schema
+    stop_point_atco_code_val = getattr(definition, 'stop_point_atco_code', None)
+    if stop_point_atco_code_val is not None:
+        db_definition.stop_point_id = stop_point_atco_code_val
+    
+    arrival_time_val = getattr(definition, 'arrival_time', None)
+    if arrival_time_val is not None:
+        db_definition.arrival_time = arrival_time_val
+    
+    departure_time_val = getattr(definition, 'departure_time', None)
+    if departure_time_val is not None:
+        db_definition.departure_time = departure_time_val
 
     db.commit()
     db.refresh(db_definition)
 
-    # Return a dictionary that matches the response_model schema
+    # Manually construct the response and format time objects
     return {
         "jp_id": db_definition.jp_id,
-        "stop_point_atco_code": db_definition.stop_point_id,  # Map model's 'stop_point_id' to schema's 'stop_point_atco_code'
+        "stop_point_atco_code": db_definition.stop_point_id,
         "sequence": db_definition.sequence,
         "arrival_time": db_definition.arrival_time.isoformat(),
         "departure_time": db_definition.departure_time.isoformat(),
@@ -131,12 +144,8 @@ def delete_journey_pattern_definition(
         )
         .first()
     )
-
     if db_definition is None:
-        raise HTTPException(
-            status_code=404, detail="Journey pattern definition not found"
-        )
-
+        raise HTTPException(status_code=404, detail="Journey pattern definition not found")
     db.delete(db_definition)
     db.commit()
     return {"message": "Journey pattern definition deleted successfully"}

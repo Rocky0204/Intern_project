@@ -1,7 +1,8 @@
 # api/schemas.py
-from datetime import *
-from enum import IntEnum  # Needed for RunStatus if it's used in schemas
+from datetime import datetime, time
+from enum import IntEnum
 from pydantic import BaseModel, ConfigDict
+from typing import Dict, Any, List, Optional
 
 
 # ──────────────── Bus ────────────────
@@ -22,13 +23,10 @@ class BusRead(BusBase):
 
 
 class BusUpdate(BaseModel):
-    # Note: 'capacity' was in your original BusUpdate schema but not in the model.
-    # It's removed here to align with models.py.
-    # If you need to update capacity, it should be added to models.py Bus model.
-    registration_number: str | None = None  # Maps to reg_num in model
-    garage_id: int | None = None
-    operator_id: int | None = None
-    bus_type_id: int | None = None  # Added for completeness if bus_type can be updated
+    registration_number: Optional[str] = None
+    garage_id: Optional[int] = None
+    operator_id: Optional[int] = None
+    bus_type_id: Optional[int] = None
 
 
 # ───── OPERATOR ─────
@@ -47,10 +45,8 @@ class OperatorRead(OperatorBase):
 
 
 class OperatorUpdate(BaseModel):
-    name: str | None = None
-    operator_code: str | None = (
-        None  # Added for completeness if operator_code can be updated
-    )
+    operator_code: Optional[str] = None
+    name: Optional[str] = None
 
 
 # ───── GARAGE ─────
@@ -71,16 +67,16 @@ class GarageRead(GarageBase):
 
 
 class GarageUpdate(BaseModel):
-    name: str | None = None
-    capacity: int | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    name: Optional[str] = None
+    capacity: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 # ───── BusType ─────
 class BusTypeBase(BaseModel):
     name: str
-    capacity: int  # Only fields present in models.py
+    capacity: int
 
 
 class BusTypeCreate(BusTypeBase):
@@ -93,8 +89,8 @@ class BusTypeRead(BusTypeBase):
 
 
 class BusTypeUpdate(BaseModel):
-    name: str | None = None
-    capacity: int | None = None
+    name: Optional[str] = None
+    capacity: Optional[int] = None
 
 
 # ───── StopArea ─────
@@ -114,9 +110,9 @@ class StopAreaRead(StopAreaBase):
 
 
 class StopAreaUpdate(BaseModel):
-    admin_area_code: str | None = None
-    name: str | None = None
-    is_terminal: bool | None = None
+    admin_area_code: Optional[str] = None
+    name: Optional[str] = None
+    is_terminal: Optional[bool] = None
 
 
 # ───── StopPoint ─────
@@ -137,20 +133,17 @@ class StopPointRead(StopPointBase):
 
 
 class StopPointUpdate(BaseModel):
-    name: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    stop_area_code: int | None = None
+    name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    stop_area_code: Optional[int] = None
 
 
 # ───── Route ─────
 class RouteBase(BaseModel):
-    # Note: models.py has 'name', 'description', 'operator_id'.
-    # Your original schema had 'route_code', 'name', 'operator_id'.
-    # Aligning with models.py for creation. If 'route_code' is needed, add it to models.py.
     name: str
     operator_id: int
-    description: str | None = None  # From models.py, nullable
+    description: Optional[str] = None
 
 
 class RouteCreate(RouteBase):
@@ -163,9 +156,9 @@ class RouteRead(RouteBase):
 
 
 class RouteUpdate(BaseModel):
-    name: str | None = None
-    operator_id: int | None = None
-    description: str | None = None  # For updating description
+    name: Optional[str] = None
+    operator_id: Optional[int] = None
+    description: Optional[str] = None
 
 
 # ───── Service ─────
@@ -173,8 +166,8 @@ class ServiceBase(BaseModel):
     service_code: str
     name: str
     operator_id: int
-    line_id: int  # Added based on models.py relationship
-    description: str | None = None  # Added for consistency with model and read schema
+    line_id: int
+    description: Optional[str] = None
 
 
 class ServiceCreate(ServiceBase):
@@ -183,22 +176,20 @@ class ServiceCreate(ServiceBase):
 
 class ServiceRead(ServiceBase):
     service_id: int
-    # description: str | None = None  # Already in ServiceBase, no need to redefine
     model_config = ConfigDict(from_attributes=True)
 
 
 class ServiceUpdate(BaseModel):
-    service_code: str | None = None
-    name: str | None = None
-    operator_id: int | None = None
-    line_id: int | None = None  # For updating line_id
-    description: str | None = None  # Ensure this is present for updates
+    service_code: Optional[str] = None
+    name: Optional[str] = None
+    operator_id: Optional[int] = None
+    line_id: Optional[int] = None
+    description: Optional[str] = None
 
 
 # ───── Line ─────
 class LineBase(BaseModel):
     line_name: str
-    # Note: models.py has operator_id, not service_id. Aligning with models.py.
     operator_id: int
 
 
@@ -212,19 +203,18 @@ class LineRead(LineBase):
 
 
 class LineUpdate(BaseModel):
-    line_name: str | None = None
-    operator_id: int | None = None  # For updating operator_id
+    line_name: Optional[str] = None
+    operator_id: Optional[int] = None
 
 
 # ───── JourneyPattern ─────
 class JourneyPatternBase(BaseModel):
     jp_code: str
     line_id: int
-    # Added based on models.py relationships
     route_id: int
     service_id: int
     operator_id: int
-    name: str | None = None  # From models.py, nullable
+    name: Optional[str] = None
 
 
 class JourneyPatternCreate(JourneyPatternBase):
@@ -237,21 +227,20 @@ class JourneyPatternRead(JourneyPatternBase):
 
 
 class JourneyPatternUpdate(BaseModel):
-    jp_code: str | None = None
-    line_id: int | None = None
-    route_id: int | None = None
-    service_id: int | None = None
-    operator_id: int | None = None
-    name: str | None = None
+    jp_code: Optional[str] = None
+    line_id: Optional[int] = None
+    route_id: Optional[int] = None
+    service_id: Optional[int] = None
+    operator_id: Optional[int] = None
+    name: Optional[str] = None
 
 
 # ───── StopActivity ─────
 class StopActivityBase(BaseModel):
-    # Aligned with models.py requirements for creation
     activity_type: str
     activity_time: time
     pax_count: int
-    atco_code: int  # Maps to stop_point_id in model
+    stop_point_id: int # Changed from atco_code to stop_point_id to match model
     vj_id: int
 
 
@@ -265,19 +254,18 @@ class StopActivityRead(StopActivityBase):
 
 
 class StopActivityUpdate(BaseModel):
-    activity_type: str | None = None
-    activity_time: time | None = None
-    pax_count: int | None = None
-    atco_code: int | None = None  # Maps to stop_point_id in model
-    vj_id: int | None = None
+    activity_type: Optional[str] = None
+    activity_time: Optional[time] = None
+    pax_count: Optional[int] = None
+    stop_point_id: Optional[int] = None
+    vj_id: Optional[int] = None
 
 
-# ───── JourneyPatternDefinition ─────
+# ──────────────── JourneyPatternDefinition ────────────────
 class JourneyPatternDefinitionBase(BaseModel):
     jp_id: int
-    stop_point_atco_code: int  # Maps to stop_point_id in model
+    stop_point_atco_code: int
     sequence: int
-    # Note: models.py has arrival_time and departure_time, not stop_activity_id or distance_from_start.
     arrival_time: time
     departure_time: time
 
@@ -291,18 +279,17 @@ class JourneyPatternDefinitionRead(JourneyPatternDefinitionBase):
 
 
 class JourneyPatternDefinitionUpdate(BaseModel):
-    stop_point_atco_code: int | None = None
-    sequence: int | None = None
-    arrival_time: time | None = None
-    departure_time: time | None = None
-
+    # jp_id and sequence are part of the composite primary key and passed in URL,
+    # so they should not be in the request body for updates.
+    stop_point_atco_code: Optional[int] = None
+    arrival_time: Optional[time] = None
+    departure_time: Optional[time] = None
 
 # ───── RouteDefinition ─────
 class RouteDefinitionBase(BaseModel):
     route_id: int
-    stop_point_atco_code: int  # Maps to stop_point_id in model
+    stop_point_id: int # Changed from stop_point_atco_code to stop_point_id
     sequence: int
-    # Note: models.py does not have distance_from_start.
 
 
 class RouteDefinitionCreate(RouteDefinitionBase):
@@ -314,8 +301,8 @@ class RouteDefinitionRead(RouteDefinitionBase):
 
 
 class RouteDefinitionUpdate(BaseModel):
-    stop_point_atco_code: int | None = None
-    sequence: int | None = None
+    stop_point_id: Optional[int] = None
+    sequence: Optional[int] = None
 
 
 # ──────────────── Block ────────────────
@@ -335,9 +322,9 @@ class BlockRead(BlockBase):
 
 
 class BlockUpdate(BaseModel):
-    name: str | None = None
-    operator_id: int | None = None
-    bus_type_id: int | None = None
+    name: Optional[str] = None
+    operator_id: Optional[int] = None
+    bus_type_id: Optional[int] = None
 
 
 # ──────────────── VehicleJourney ────────────────
@@ -348,7 +335,7 @@ class VehicleJourneyBase(BaseModel):
     block_id: int
     operator_id: int
     line_id: int
-    service_id: int  # Added based on models.py relationship
+    service_id: int
 
 
 class VehicleJourneyCreate(VehicleJourneyBase):
@@ -361,13 +348,13 @@ class VehicleJourneyRead(VehicleJourneyBase):
 
 
 class VehicleJourneyUpdate(BaseModel):
-    departure_time: time | None = None
-    dayshift: int | None = None
-    jp_id: int | None = None
-    block_id: int | None = None
-    operator_id: int | None = None
-    line_id: int | None = None
-    service_id: int | None = None
+    departure_time: Optional[time] = None
+    dayshift: Optional[int] = None
+    jp_id: Optional[int] = None
+    block_id: Optional[int] = None
+    operator_id: Optional[int] = None
+    line_id: Optional[int] = None
+    service_id: Optional[int] = None
 
 
 # ──────────────── Demand ────────────────
@@ -388,11 +375,10 @@ class DemandRead(DemandBase):
 
 
 class DemandUpdate(BaseModel):
-    count: float | None = None
+    count: Optional[float] = None
 
 
 # ──────────────── EmulatorLog ────────────────
-# Define RunStatus here if it's not globally available or imported in schemas
 class RunStatus(IntEnum):
     QUEUED = 0
     RUNNING = 1
@@ -401,21 +387,40 @@ class RunStatus(IntEnum):
 
 
 class EmulatorLogBase(BaseModel):
-    status: RunStatus  # Use the IntEnum type directly
+    status: RunStatus
+
+
+# New schema for detailed optimization results, with all fields optional
+class OptimizationDetailsRead(BaseModel):
+    status: Optional[str] = None  # e.g., "OPTIMAL", "FEASIBLE", "ERROR"
+    message: Optional[str] = None # For error messages or success messages
+    total_passengers_served: Optional[int] = None
+    schedule: Optional[List[Dict[str, Any]]] = None # Assuming schedule is a list of dicts
+
+    # Fields that were complained about as "required" in previous errors
+    solver_runtime_ms: Optional[float] = None
+    solver_iterations: Optional[int] = None
+    buses_assigned_summary: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmulatorLogCreate(EmulatorLogBase):
-    # No timestamp/started_at/last_updated here, as they are server-generated
+    # For creation, status is the only required field from the client.
+    # started_at, last_updated, and optimization_details are handled by the server.
     pass
 
 
 class EmulatorLogRead(EmulatorLogBase):
-    run_id: int  # Corrected from log_id to run_id
-    started_at: datetime  # Corrected from timestamp to started_at, and type to datetime
-    last_updated: datetime | None = None  # Added last_updated as per model snippet
+    run_id: int
+    started_at: datetime
+    last_updated: datetime
+    # Now explicitly link to the new OptimizationDetailsRead schema
+    optimization_details: Optional[OptimizationDetailsRead] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class EmulatorLogUpdate(BaseModel):
-    status: RunStatus | None = None  # Allow updating status
-    # last_updated is generally updated by the server on modification, not client
+    status: Optional[RunStatus] = None
+    # Use the new Optional OptimizationDetailsRead schema for updates too
+    optimization_details: Optional[OptimizationDetailsRead] = None
