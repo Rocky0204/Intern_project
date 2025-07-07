@@ -33,9 +33,8 @@ def main():
         db_session = next(get_db())
 
         # Initialize the BusEmulator
-        # Set use_optimized_schedule to False to ensure the emulator generates
-        # and saves its own schedule to the database.
-        emulator = BusEmulator(db=db_session, use_optimized_schedule=False)
+        # Set use_optimized_schedule to True to enable the optimized scheduling logic.
+        emulator = BusEmulator(db=db_session, use_optimized_schedule=True)
 
         # Run the simulation
         simulation_return_status = emulator.run_simulation()
@@ -48,9 +47,7 @@ def main():
             db_session.rollback() # Rollback any pending changes on error
     finally:
         if db_session:
-            db_session.close() # Always close the session
-            logger.info("Database session closed.")
-        logger.info("Runner script finished.")
+            db_session.close()
 
 if __name__ == "__main__":
     main()
