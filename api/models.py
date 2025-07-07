@@ -7,14 +7,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from typing import Optional, List, Dict, Any
 from sqlalchemy import Column, Integer, String, DateTime, Time, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.ext.declarative import declarative_base # <--- THIS LINE IS CRUCIAL
 
-
-Base = declarative_base()
-
+# This is the ONLY Base definition that should exist.
 class Base(DeclarativeBase):
     pass
-
 
 class StopArea(Base):
     __tablename__ = "stop_area"

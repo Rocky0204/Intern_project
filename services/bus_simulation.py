@@ -350,9 +350,9 @@ class Bus:
                 passenger.alight_time = current_time
                 alighted_this_stop.append(passenger)
                 self.passenger_alighted_count += 1
-                logger.info(
-                    f"Time {format_time(current_time)}: Passenger {passenger.id} alighted from Bus {self.bus_id} at {stop.stop_id}."
-                )
+                # logger.info(
+                #     f"Time {format_time(current_time)}: Passenger {passenger.id} alighted from Bus {self.bus_id} at {stop.stop_id}."
+                # )
             else:
                 remaining_onboard.append(passenger)
 
@@ -393,9 +393,9 @@ class Bus:
                 passenger.board_time = current_time
                 self.onboard_passengers.append(passenger)
                 boarded_count += 1
-                logger.info(
-                    f"Time {format_time(current_time)}: Passenger {passenger.id} boarded Bus {self.bus_id} at {stop.stop_id} (Dest: {passenger.destination_stop_id})."
-                )
+                # logger.info(
+                #     f"Time {format_time(current_time)}: Passenger {passenger.id} boarded Bus {self.bus_id} at {stop.stop_id} (Dest: {passenger.destination_stop_id})."
+                # )
             else:
                 passengers_to_requeue.append(passenger)
 
@@ -519,9 +519,9 @@ class OptimizedScheduleManager:
         traffic_factor = 1.0
         if is_rush_hour(current_time_minutes):
             traffic_factor = 1.5
-            logger.debug(
-                f"Optimizer: Rush hour detected at {format_time(current_time_minutes)}. Applying traffic factor {traffic_factor}."
-            )
+            # logger.debug(
+            #     f"Optimizer: Rush hour detected at {format_time(current_time_minutes)}. Applying traffic factor {traffic_factor}."
+            # )
 
         return max(1, int(math.ceil(time_minutes * traffic_factor)))
 
@@ -1488,9 +1488,9 @@ class BusEmulator:
                 self.stops[passenger.origin_stop_id].add_passenger(passenger)
                 # Update cumulative arrived count
                 self.cumulative_stop_data[passenger.origin_stop_id]["arrived"] += 1
-                logger.debug(
-                    f"Time {format_time(current_time)}: Passenger {passenger.id} dynamically arrived at stop {passenger.origin_stop_id}."
-                )
+                # logger.debug(
+                #     f"Time {format_time(current_time)}: Passenger {passenger.id} dynamically arrived at stop {passenger.origin_stop_id}."
+                # )
             else:
                 logger.warning(
                     f"Passenger {passenger.id} requested arrival at unknown stop {passenger.origin_stop_id}. Skipping."

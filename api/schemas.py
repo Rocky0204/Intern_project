@@ -408,6 +408,7 @@ class OptimizationDetailsRead(BaseModel):
 class EmulatorLogCreate(EmulatorLogBase):
     # For creation, status is the only required field from the client.
     # started_at, last_updated, and optimization_details are handled by the server.
+    optimization_details: Optional[OptimizationDetailsRead] = None
     pass
 
 
@@ -417,10 +418,11 @@ class EmulatorLogRead(EmulatorLogBase):
     last_updated: datetime
     # Now explicitly link to the new OptimizationDetailsRead schema
     optimization_details: Optional[OptimizationDetailsRead] = None
-    model_config = ConfigDict(from_attributes=True)
+    # model_config = ConfigDict(from_attributes=True)
 
 
 class EmulatorLogUpdate(BaseModel):
     status: Optional[RunStatus] = None
     # Use the new Optional OptimizationDetailsRead schema for updates too
     optimization_details: Optional[OptimizationDetailsRead] = None
+    model_config = ConfigDict(from_attributes=True)
