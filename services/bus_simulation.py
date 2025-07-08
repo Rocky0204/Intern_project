@@ -9,10 +9,8 @@ import os
 import sys
 import collections
 
-# Add the project root to sys.path to enable absolute imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# --- Database Imports ---
 from sqlalchemy.orm import Session, joinedload
 from api.models import (
     StopPoint,
@@ -29,19 +27,12 @@ from api.models import (
     Service,
 )
 
-# Configure logging for better output
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
 
-# --- Helper Functions for Dynamic Calculations ---
-
-
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """
-    Calculate the distance between two points on Earth using the Haversine formula.
-    Returns distance in kilometers.
-    """
-    R = 6371  # Radius of Earth in kilometers
+
+    R = 6371 
 
     lat1_rad = math.radians(lat1)
     lon1_rad = math.radians(lon1)
@@ -62,11 +53,6 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 
 def is_rush_hour(current_minutes_from_midnight: int) -> bool:
-    """
-    Determines if the current time falls within defined rush hour periods.
-    Morning rush: 07:00 - 09:00 (420-540 minutes)
-    Evening rush: 16:00 - 18:00 (960-1080 minutes)
-    """
     morning_rush_start = 7 * 60
     morning_rush_end = 9 * 60
 
@@ -81,25 +67,13 @@ def is_rush_hour(current_minutes_from_midnight: int) -> bool:
 
 
 def format_time(total_minutes_from_midnight: int) -> str:
-    """
-    Formats a total number of minutes from midnight into an HH:MM string.
-    Used for human-readable timestamps in simulation logs.
-    """
     sim_datetime = datetime(2025, 6, 10, 0, 0, 0) + timedelta(
         minutes=total_minutes_from_midnight
     )
     return sim_datetime.strftime("%H:%M")
 
 
-# --- Simulation Classes ---
-
-
 class Passenger:
-    """
-    Represents an individual passenger in the simulation.
-    Tracks their journey from arrival at origin to alighting at destination.
-    """
-
     _id_counter = 0
 
     def __init__(
@@ -110,28 +84,25 @@ class Passenger:
         self.origin_stop_id = origin_stop_id
         self.destination_stop_id = destination_stop_id
         self.arrival_time_at_stop = (
-            arrival_time_at_stop  # Time they arrive at their origin stop
+            arrival_time_at_stop  
         )
-        self.board_time: Optional[int] = None  # Time they board a bus
-        self.alight_time: Optional[int] = None  # Time they alight from a bus
+        self.board_time: Optional[int] = None  
+        self.alight_time: Optional[int] = None  
 
     @property
     def wait_time(self) -> Optional[int]:
-        """Calculates the time a passenger waited for a bus."""
         if self.board_time is not None and self.arrival_time_at_stop is not None:
             return self.board_time - self.arrival_time_at_stop
         return None
 
     @property
     def travel_time(self) -> Optional[int]:
-        """Calculates the time a passenger spent traveling on a bus."""
         if self.alight_time is not None and self.board_time is not None:
             return self.alight_time - self.board_time
         return None
 
     @property
     def total_trip_time(self) -> Optional[int]:
-        """Calculates the total time from arrival at origin to alighting at destination."""
         if self.alight_time is not None and self.arrival_time_at_stop is not None:
             return self.alight_time - self.arrival_time_at_stop
         return None
@@ -141,10 +112,6 @@ class Passenger:
 
 
 class Stop:
-    """
-    Represents a bus stop in the simulation.
-    Manages waiting passengers at this stop.
-    """
 
     def __init__(self, stop_id: int, name: str):
         self.stop_id = stop_id
@@ -153,15 +120,9 @@ class Stop:
         self.last_bus_arrival_time = -float("inf")
 
     def add_passenger(self, passenger: Passenger):
-        """
-        Adds a passenger object to the waiting queue at this stop.
-        """
         self.waiting_passengers.append(passenger)
 
     def get_waiting_passengers_count(self) -> int:
-        """
-        Returns the current number of passengers waiting at the stop.
-        """
         return len(self.waiting_passengers)
 
     def __repr__(self) -> str:
@@ -169,11 +130,6 @@ class Stop:
 
 
 class Bus:
-    """
-    Represents a bus vehicle in the simulation.
-    Manages its state, passengers onboard, and records its schedule/events.
-    """
-
     def __init__(
         self,
         bus_id: str,
@@ -215,7 +171,7 @@ class Bus:
         self.passenger_alighted_count = 0
         self.last_stop_arrival_time = self.current_time
         self.destination_stop_id_on_segment: Optional[int] = (
-            None  # New attribute to store target stop when en route
+            None  
         )
 
     def add_event_to_schedule(
@@ -230,9 +186,6 @@ class Bus:
         direction: str,
         status: str,
     ):
-        """
-        Records an event in the bus's schedule.
-        """
         self.schedule.append(
             (
                 time,
@@ -248,13 +201,11 @@ class Bus:
         )
 
     def start_route(self, route: "SimRoute", global_simulation_time: int):
-        """
-        Initiates a bus on a new route.
-        """
+
         self.current_route = route
         self.current_direction = "Outbound"
         self.route_index = 0
-        self.is_en_route = False  # Bus is at the start stop, not yet moving
+        self.is_en_route = False  
         self.time_to_next_stop = 0
         self.total_route_duration_minutes = route.total_outbound_route_time_minutes
         self.last_stop_arrival_time = global_simulation_time
@@ -267,15 +218,10 @@ class Bus:
             0,
             0,
             "N/A",
-            "AT_STOP",  # Status is AT_STOP when starting a route
+            "AT_STOP",  
         )
 
     def move_to_next_stop(self, global_simulation_time: int):
-        """
-        Initiates the bus movement to the next stop on its current route.
-        Sets is_en_route and time_to_next_stop.
-        Stores the destination stop ID for later update upon arrival.
-        """
         if not self.current_route:
             logger.warning(f"Bus {self.bus_id} has no route assigned to move on.")
             self.is_en_route = False
@@ -296,8 +242,8 @@ class Bus:
             next_stop_idx = current_stop_idx + 1
             next_stop_id = self.current_route.stops_ids_in_order[
                 next_stop_idx
-            ]  # This is the destination for this segment
-            self.destination_stop_id_on_segment = next_stop_id  # Store the target stop
+            ]  
+            self.destination_stop_id_on_segment = next_stop_id  
 
             total_segments = len(self.current_route.stops_ids_in_order) - 1
             if total_segments > 0:
@@ -309,38 +255,31 @@ class Bus:
                 self.time_to_next_stop = 0
 
             self.is_en_route = True
-            # Log the departure, not arrival yet
             logger.info(
                 f"Time {format_time(global_simulation_time)}: Bus {self.bus_id} en route from {self.current_stop_id} to {next_stop_id}. Expected arrival in {self.time_to_next_stop:.1f} minutes."
             )
 
-            # Add event for starting movement
             self.add_event_to_schedule(
                 global_simulation_time,
                 f"Departed {self.current_stop_id} towards {next_stop_id}",
-                self.current_stop_id,  # Log current stop as departure point
+                self.current_stop_id,  
                 len(self.onboard_passengers),
                 0,
                 0,
-                0,  # Boarded/alighted counts are for arrival at stop, not departure
+                0,  
                 self.current_direction,
                 "EN_ROUTE_DEPARTURE",
             )
 
         else:
-            # This case means it's already at the last stop, so no further movement on this route.
             logger.info(
                 f"Time {format_time(global_simulation_time)}: Bus {self.bus_id} is already at the end of route {self.current_route.route_id} at {self.current_stop_id} and cannot move further on this route."
             )
-            self.is_en_route = False  # Ensure it's not en route if it can't move
+            self.is_en_route = False 
             self.time_to_next_stop = 0
-            # Do NOT set current_route = None here, let the main simulation loop handle route completion.
 
     def alight_passengers(self, current_time: int, stop: Stop) -> list[Passenger]:
-        """
-        Simulates passengers alighting from the bus at the current stop.
-        Returns a list of alighted Passenger objects.
-        """
+        
         alighted_this_stop = []
         remaining_onboard = []
         self.passenger_alighted_count = 0
@@ -360,10 +299,7 @@ class Bus:
         return alighted_this_stop
 
     def board_passengers(self, current_time: int, stop: Stop) -> int:
-        """
-        Simulates passengers boarding the bus from the current stop's waiting queue.
-        Considers bus capacity and overcrowding factor.
-        """
+
         boarded_count = 0
         max_onboard_with_overcrowding = int(self.capacity * self.overcrowding_factor)
 
@@ -405,10 +341,6 @@ class Bus:
 
 
 class SimRoute:
-    """
-    Represents a bus route with its sequence of stops and total travel time.
-    This is the simulation's internal representation of a route.
-    """
 
     def __init__(
         self,
@@ -432,11 +364,7 @@ class SimRoute:
 
 
 class OptimizedScheduleManager:
-    """
-    Generates an optimized schedule for buses based on demand.
-    Uses a greedy approach to assign buses to routes with the highest waiting passengers.
-    """
-
+   
     def __init__(
         self,
         stops: dict,
@@ -447,18 +375,17 @@ class OptimizedScheduleManager:
         end_time_minutes: int,
         config: dict,
         stop_points_data: dict,
-    ):  # Added stop_points_data
+    ):  
         self.stops = {
             k: copy.deepcopy(v) for k, v in stops.items()
-        }  # Deep copy stops for isolated demand tracking
+        }  
         self.routes = routes
         self.buses = buses
         self.all_raw_demands = all_raw_demands
         self.start_time_minutes = start_time_minutes
         self.end_time_minutes = end_time_minutes
         self.config = config
-        self.stop_points_data = stop_points_data  # Store stop_points_data
-
+        self.stop_points_data = stop_points_data  
         self.estimated_demand = self._estimate_future_demand()
         self.bus_availability = {bus_id: start_time_minutes for bus_id in buses.keys()}
         self.bus_current_locations = {
@@ -549,8 +476,6 @@ class OptimizedScheduleManager:
         except ValueError:
             return 0, []
 
-        # Create a deep copy of the relevant part of temp_stop_queues for simulation
-        # This is crucial to avoid modifying the actual queues during hypothetical calculations
         sim_temp_stop_queues = {
             stop_id: collections.deque(list(queue))
             for stop_id, queue in temp_stop_queues.items()
@@ -564,7 +489,6 @@ class OptimizedScheduleManager:
             if current_stop_id in sim_temp_stop_queues:
                 passengers_at_this_stop = sim_temp_stop_queues[current_stop_id]
 
-                # Temporarily store passengers that are not boarded in this simulation step
                 temp_passengers_not_boarded_at_this_stop = collections.deque()
 
                 while passengers_at_this_stop:
@@ -581,11 +505,11 @@ class OptimizedScheduleManager:
                         else:
                             temp_passengers_not_boarded_at_this_stop.append(
                                 p_sim
-                            )  # Bus full, put back
+                            )  
                     else:
                         temp_passengers_not_boarded_at_this_stop.append(
                             p_sim
-                        )  # Not going on this route, put back
+                        )  
 
                 sim_temp_stop_queues[current_stop_id].extend(
                     temp_passengers_not_boarded_at_this_stop
@@ -599,36 +523,26 @@ class OptimizedScheduleManager:
         the most waiting passengers.
         """
         bus_schedules_optimized = collections.defaultdict(list)
-
-        # Initialize internal state for optimizer
-        # Use a deep copy for temp_stops_with_passengers to allow modification without affecting original
         temp_stops_with_passengers = {
             stop_id: collections.deque() for stop_id in self.stops.keys()
         }
 
-        # Populate initial demand into temp_stops for the optimizer's view
         sorted_initial_demands = sorted(
             list(self.all_raw_demands), key=lambda p: p["arrival_time"]
         )
 
-        # Keep track of which passenger IDs have been 'served' by the optimizer's schedule
-        # This prevents the same passenger from being counted multiple times across different scheduled trips
         optimizer_served_passenger_ids = set()
 
-        # Main scheduling loop
         while True:
-            # First, process any new demands that have arrived up to the current earliest available bus time
             earliest_available_time = min(self.bus_availability.values())
 
-            # Add new dynamic demands to temp_stops_with_passengers
             newly_arrived_demands = []
             while (
                 sorted_initial_demands
                 and sorted_initial_demands[0]["arrival_time"] <= earliest_available_time
             ):
-                demand = sorted_initial_demands.pop(0)  # Pop from the front
+                demand = sorted_initial_demands.pop(0)  
                 for _ in range(int(demand["count"])):
-                    # Only add if not already served by a previous schedule decision
                     p = Passenger(
                         demand["origin"], demand["destination"], demand["arrival_time"]
                     )
@@ -636,11 +550,10 @@ class OptimizedScheduleManager:
                         temp_stops_with_passengers[demand["origin"]].append(p)
                 newly_arrived_demands.append(demand)
 
-            # Find the next bus to schedule
             next_bus_id_to_schedule = None
             earliest_bus_available_time = (
                 self.end_time_minutes + 1
-            )  # Initialize with a time outside the window
+            )  
 
             for bus_id, availability_time in self.bus_availability.items():
                 if availability_time <= earliest_bus_available_time:
@@ -651,20 +564,18 @@ class OptimizedScheduleManager:
                 next_bus_id_to_schedule is None
                 or earliest_bus_available_time > self.end_time_minutes
             ):
-                # No more buses to schedule within the time window
                 break
 
             bus_obj = self.buses[next_bus_id_to_schedule]
             current_bus_location = self.bus_current_locations[next_bus_id_to_schedule]
 
-            best_trip_score = -1  # Maximize passengers served
+            best_trip_score = -1  
             best_trip_details = None
-            actual_served_passengers_for_best_trip = []  # To store the actual passenger objects for removal
+            actual_served_passengers_for_best_trip = []  
 
-            # Iterate through all possible routes to find the best one for this bus
             for route_id, route_obj in self.routes.items():
                 if not route_obj.stops_ids_in_order:
-                    continue  # Skip empty routes
+                    continue  
 
                 potential_start_stop_id = route_obj.stops_ids_in_order[0]
 
@@ -775,14 +686,10 @@ class OptimizedScheduleManager:
                         f"Optimizer: Bus {next_bus_id_to_schedule} scheduled for Route {best_trip_details['route_id']} at {format_time(best_trip_details['departure_time_minutes'])}. Served {best_trip_score} passengers. Next available: {format_time(self.bus_availability[next_bus_id_to_schedule])}"
                     )
                 else:
-                    # Trip ends too late, advance bus availability to end of simulation to prevent re-evaluating
                     self.bus_availability[next_bus_id_to_schedule] = (
                         self.end_time_minutes + 1
                     )
             else:
-                # No beneficial trip found for this bus at this time.
-                # Advance its availability slightly to avoid infinite looping on this bus.
-                # This also allows other buses to be considered or new demand to arrive.
                 self.bus_availability[next_bus_id_to_schedule] += self.config.get(
                     "scheduling_interval_minutes", 5
                 )
@@ -850,23 +757,22 @@ class BusEmulator:
         self.buses = {}
         self.bus_types_map = {}
         self.db_buses_map = {}
-        self.stop_points_data = {}  # Added stop_points_data initialization
+        self.stop_points_data = {}  
 
         self.bus_schedules_planned = collections.defaultdict(list)
         self.initial_bus_schedules_for_db_save = collections.defaultdict(
             list
-        )  # Will be populated after _plan_schedules
+        ) 
 
         self.pending_passengers: collections.deque[Passenger] = collections.deque()
         self.completed_passengers: list[Passenger] = []
 
-        # New: Cumulative passenger data at stops
         self.cumulative_stop_data = collections.defaultdict(
             lambda: {
                 "arrived": 0,
                 "boarded": 0,
                 "alighted": 0,
-                "name": "",  # To store stop name for reporting
+                "name": "", 
             }
         )
 
@@ -878,9 +784,6 @@ class BusEmulator:
         self._perform_initial_bus_positioning()
 
     def _load_default_config(self) -> dict:
-        """
-        Loads default configuration values.
-        """
         logger.info("Loading default simulation configuration.")
         return {
             "avg_stop_time_per_passenger": 3,
@@ -891,14 +794,10 @@ class BusEmulator:
             "max_trips_per_bus": 5,
             "min_layover_minutes": 5,
             "max_layover_minutes": 15,
-            "scheduling_interval_minutes": 5,  # New config for optimizer time step
+            "scheduling_interval_minutes": 5,  
         }
 
     def _load_data_from_db(self):
-        """
-        Loads all necessary initial data for the simulation directly from the database.
-        Includes enhanced error handling and joinedload for performance.
-        """
         logger.info("Loading simulation data from database...")
 
         # 1. Load Stop Points
@@ -913,12 +812,10 @@ class BusEmulator:
         }
         self.stop_points_data = {
             sp.atco_code: (sp.latitude, sp.longitude) for sp in db_stop_points
-        }  # Populated stop_points_data
-        # Initialize cumulative_stop_data with stop names
+        }  
         for sp in db_stop_points:
             self.cumulative_stop_data[sp.atco_code]["name"] = sp.name
 
-        # Ensure default depot exists and is a valid stop point
         self.default_depot_id = db_stop_points[0].atco_code if db_stop_points else None
         if self.default_depot_id is None or self.default_depot_id not in self.stops:
             logger.error(
@@ -994,7 +891,7 @@ class BusEmulator:
                 )
                 logger.debug(
                     f"Loaded Route {route_db.route_id} with stops: {stops_ids_in_order}"
-                )  # Added debug log
+                ) 
             else:
                 logger.warning(
                     f"Route {route_db.route_id} only has {len(stops_ids_in_order)} stop(s). Skipping as it cannot form a valid trip."
@@ -1042,7 +939,6 @@ class BusEmulator:
     def _get_stop_area_representative_stop_point(
         self, stop_area_code: int
     ) -> Optional[int]:
-        """Helper to find a representative stop point for a given stop area code."""
         stop_point = (
             self.db.query(StopPoint)
             .filter(StopPoint.stop_area_code == stop_area_code)
@@ -1051,10 +947,6 @@ class BusEmulator:
         return stop_point.atco_code if stop_point else None
 
     def _initialize_buses(self):
-        """
-        Initializes Bus objects for the simulation based on loaded DBBus data.
-        Generates simulator-internal IDs (e.g., S1, L2) and stores DB registration.
-        """
         sim_bus_id_counter_by_type = collections.defaultdict(lambda: 1)
 
         for db_reg, db_bus_obj in self.db_buses_map.items():
@@ -1088,10 +980,6 @@ class BusEmulator:
         logger.info(f"Initialized {len(self.buses)} simulation Bus objects.")
 
     def _plan_schedules(self):
-        """
-        Determines the schedule for each bus: either from optimized VehicleJourneys
-        or by generating a random schedule.
-        """
         self.bus_schedules_planned = collections.defaultdict(list)
 
         if self.use_optimized_schedule:
@@ -1126,30 +1014,20 @@ class BusEmulator:
         )
 
     def _estimate_future_demand(self) -> collections.defaultdict:
-        """
-        Estimates future passenger demand at each stop based on raw demand data.
-        Returns: defaultdict(lambda: defaultdict(int)) where
-                 estimated_demand[stop_id][time_minute] = passenger_count
-        """
+        
         estimated_demand = collections.defaultdict(lambda: collections.defaultdict(int))
-        # Populate estimated_demand based on self.all_raw_demands
         for demand_record in self.all_raw_demands:
             origin_id = demand_record["origin"]
             arrival_time = demand_record["arrival_time"]
             count = demand_record["count"]
-            # This version concentrates demand at the exact arrival_time.
             if self.start_time_minutes <= arrival_time <= self.end_time_minutes:
                 estimated_demand[origin_id][arrival_time] += count
         return estimated_demand
 
     def _generate_random_schedules(self):
-        """
-        Generates a simple random schedule for each bus, but with a bias towards
-        stops with higher estimated future demand.
-        """
         logger.info("Generating demand-aware random schedules for buses...")
 
-        MIN_TRIPS_PER_BUS = self.config["min_trips_per_bus"]
+        _ = self.config["min_trips_per_bus"]
         MAX_TRIPS_PER_BUS = self.config["max_trips_per_bus"]
         MIN_LAYOVER_MINUTES = self.config["min_layover_minutes"]
         MAX_LAYOVER_MINUTES = self.config["max_layover_minutes"]
@@ -1265,11 +1143,6 @@ class BusEmulator:
     def _calculate_dead_run_time(
         self, from_stop_id: int, to_stop_id: int, current_time_minutes: int
     ) -> int:
-        """
-        Calculates the travel time for a dead run between two stops.
-        Considers distance and applies a traffic factor if it's rush hour.
-        Returns time in minutes (rounded up).
-        """
         from_stop_db = (
             self.db.query(StopPoint).filter_by(atco_code=from_stop_id).first()
         )
@@ -1412,11 +1285,6 @@ class BusEmulator:
             )
 
     def _prepare_initial_passengers(self):
-        """
-        Initializes passenger objects from raw demand data and populates
-        either `self.stops[].waiting_passengers` for immediate arrivals
-        or `self.pending_passengers` for future arrivals.
-        """
         Passenger._id_counter = 0
 
         all_arrival_times = []
@@ -1448,7 +1316,6 @@ class BusEmulator:
                 )
                 if new_passenger.arrival_time_at_stop <= self.start_time_minutes:
                     self.stops[origin_stop_id].add_passenger(new_passenger)
-                    # Update cumulative arrived count
                     self.cumulative_stop_data[origin_stop_id]["arrived"] += 1
                 else:
                     self.pending_passengers.append(new_passenger)
@@ -1476,9 +1343,6 @@ class BusEmulator:
             )
 
     def _process_dynamic_demands(self, current_time: int):
-        """
-        Checks for and adds new passenger demands whose arrival time matches the current simulation time.
-        """
         while (
             self.pending_passengers
             and self.pending_passengers[0].arrival_time_at_stop <= current_time
@@ -1486,7 +1350,6 @@ class BusEmulator:
             passenger = self.pending_passengers.popleft()
             if passenger.origin_stop_id in self.stops:
                 self.stops[passenger.origin_stop_id].add_passenger(passenger)
-                # Update cumulative arrived count
                 self.cumulative_stop_data[passenger.origin_stop_id]["arrived"] += 1
                 # logger.debug(
                 #     f"Time {format_time(current_time)}: Passenger {passenger.id} dynamically arrived at stop {passenger.origin_stop_id}."
@@ -1497,17 +1360,12 @@ class BusEmulator:
                 )
 
     def _get_stop_by_id(self, stop_id: int) -> Optional[Stop]:
-        """Helper to retrieve a Stop object by its ID."""
         return self.stops.get(stop_id)
 
     def _get_route_by_id(self, route_id: int) -> Optional["SimRoute"]:
-        """Helper to retrieve a SimRoute object by its ID."""
         return self.routes.get(route_id)
 
     def _return_bus_to_depot(self, bus: "Bus", global_simulation_time: int):
-        """
-        Simulates a bus instantly returning to its initial depot after all trips are done.
-        """
         if bus.current_stop_id == bus.initial_start_point:
             logger.info(
                 f"Bus {bus.bus_id} is already at its depot {bus.initial_start_point}."
@@ -1565,9 +1423,6 @@ class BusEmulator:
                 logger.info(f"No schedule to export for Bus {bus_id}.")
 
     def _calculate_passenger_metrics(self):
-        """
-        Calculates and logs overall passenger metrics from completed trips.
-        """
         total_completed_trips = len(self.completed_passengers)
         if total_completed_trips == 0:
             logger.info("\n===== Passenger Metrics =====")
@@ -1582,7 +1437,6 @@ class BusEmulator:
             for p in self.completed_passengers
             if p.travel_time is not None
         )
-        # Corrected line: Changed 'p.total_total_trip_time' to 'p.total_trip_time'
         total_total_trip_time = sum(
             p.total_trip_time
             for p in self.completed_passengers
@@ -1602,9 +1456,6 @@ class BusEmulator:
         )
 
     def _report_cumulative_stop_data(self):
-        """
-        Reports cumulative passenger activity at each stop.
-        """
         logger.info("\n===== Cumulative Passenger Activity at Stops =====")
         for stop_id, data in self.cumulative_stop_data.items():
             stop_name = data.get("name", f"Unknown Stop ({stop_id})")
@@ -1620,9 +1471,6 @@ class BusEmulator:
         to the database.
         """
         logger.info("Saving emulator-generated schedule to database...")
-        # Clean up old data to prevent accumulation during debugging/multiple runs
-        # This is an aggressive cleanup and might not be desired in a production system.
-        # For debugging and ensuring fresh state, it's useful.
         logger.warning(
             "Performing aggressive cleanup of old VehicleJourneys, JourneyPatterns, and Blocks for debugging."
         )
@@ -1632,7 +1480,6 @@ class BusEmulator:
         self.db.commit()
         logger.warning("Aggressive cleanup complete.")
 
-        # Fetch or create default Operator, Line, Service
         default_operator = (
             self.db.query(Operator).filter_by(operator_code="DEFAULT").first()
         )
@@ -1641,7 +1488,7 @@ class BusEmulator:
                 operator_code="DEFAULT", name="Default Operator"
             )
             self.db.add(default_operator)
-            self.db.flush()  # Flush to get operator_id
+            self.db.flush()  
             logger.debug(f"Created Default Operator: {default_operator.operator_id}")
         else:
             logger.debug(
@@ -1700,7 +1547,6 @@ class BusEmulator:
                 route_id = trip["route_id"]
                 departure_time_minutes = trip["departure_time_minutes"]
 
-                # Create JourneyPattern
                 jp_code = f"EMU_JP_{sim_bus_id}_R{route_id}_T{departure_time_minutes}_{simulation_run_timestamp}"
                 assigned_jp = JourneyPattern(
                     jp_code=jp_code,
@@ -1711,16 +1557,15 @@ class BusEmulator:
                     name=f"Emulator Generated JP for {sim_bus_id} Route {route_id}",
                 )
                 self.db.add(assigned_jp)
-                self.db.flush()  # Flush to get jp_id
+                self.db.flush()  
                 logger.debug(f"Generated jp_code: {jp_code}")
                 logger.debug(f"Created JourneyPattern: {assigned_jp.jp_id}")
 
-                # Create Block
                 block_name = f"EMU_BLOCK_{sim_bus_id}_R{route_id}_T{departure_time_minutes}_{simulation_run_timestamp}"
                 assigned_block = Block(
                     name=block_name,
                     operator_id=default_operator.operator_id,
-                    bus_type_id=assigned_db_bus.bus_type_id,  # Use the bus's actual type
+                    bus_type_id=assigned_db_bus.bus_type_id,  
                 )
                 self.db.add(assigned_block)
                 self.db.flush()
@@ -1739,13 +1584,10 @@ class BusEmulator:
                     operator_id=default_operator.operator_id,
                     line_id=default_line.line_id,
                     service_id=default_service.service_id,
-                    # Removed assigned_bus_id from constructor
                 )
-                # Explicitly assign the DBBus object to the relationship attribute after instantiation
                 new_vj.assigned_bus_obj = assigned_db_bus
 
                 self.db.add(new_vj)
-                # Flush after adding new_vj to ensure it gets an ID and is tracked by the session
                 self.db.flush()
                 logger.info(
                     f"Saved generated VehicleJourney for Bus {sim_bus_id} (DB Reg: {assigned_db_bus.bus_id}) on Route {route_id} at {format_time(departure_time_minutes)}. VJ ID: {new_vj.vj_id}"
@@ -1753,18 +1595,18 @@ class BusEmulator:
                 total_vjs_saved += 1
                 logger.debug(
                     f"total_vjs_saved incremented to: {total_vjs_saved}"
-                )  # Debug log
+                )  
 
         logger.debug(
             f"Final total_vjs_saved before commit/rollback: {total_vjs_saved}"
-        )  # Debug log
+        )  
         if total_vjs_saved > 0:
             self.db.commit()
             logger.info(
                 f"Emulator-generated schedule saved to database successfully. Total {total_vjs_saved} new VJs added."
             )
         else:
-            self.db.rollback()  # Rollback if no new VJs were added
+            self.db.rollback()  
             logger.warning(
                 "No new VehicleJourneys were generated or saved to the database."
             )
@@ -1825,21 +1667,20 @@ class BusEmulator:
                         # Bus has arrived at its destination stop for this segment
                         bus.time_to_next_stop = 0  # Ensure it's exactly 0
 
-                        # Update current_stop_id to the stop it just arrived at
                         if (
                             bus.current_route
                             and bus.destination_stop_id_on_segment is not None
                         ):
                             bus.current_stop_id = bus.destination_stop_id_on_segment
-                            bus.destination_stop_id_on_segment = None  # Reset
+                            bus.destination_stop_id_on_segment = None  
                         else:
                             logger.error(
                                 f"Bus {bus.bus_id} arrived but its destination_stop_id_on_segment was not set or current_route is missing. Halting its movement."
                             )
-                            bus.is_en_route = False  # Halt movement due to error
-                            continue  # Skip this bus
+                            bus.is_en_route = False  
+                            continue  
 
-                        bus.is_en_route = False  # Bus is now AT a stop
+                        bus.is_en_route = False  
 
                         current_stop_obj = self._get_stop_by_id(bus.current_stop_id)
                         current_stop_passengers_waiting = (
@@ -1863,13 +1704,10 @@ class BusEmulator:
                             f"Time {format_time(self.current_time)}: Bus {bus.bus_id} arrived at {bus.current_stop_id}."
                         )
 
-                        # DO NOT `continue` here. Fall through to process alighting/boarding and next action.
 
-                    else:  # Bus is still en route, not arrived yet
-                        continue  # Nothing else to do for it this minute, move to next bus
+                    else:  
+                        continue  
 
-                # At this point, the bus is AT A STOP (`bus.is_en_route` is False)
-                # This applies to buses that just arrived, or were already waiting at a stop.
                 current_stop = self._get_stop_by_id(bus.current_stop_id)
                 if not current_stop:
                     logger.error(
@@ -1909,21 +1747,14 @@ class BusEmulator:
 
                 # If the bus is currently on an active route (meaning it's at an intermediate stop)
                 if bus.current_route:
-                    # Check if it's the last stop of the current route
                     if bus.current_stop_id == bus.current_route.stops_ids_in_order[-1]:
                         logger.info(
                             f"Time {format_time(self.current_time)}: Bus {bus.bus_id} completed route {bus.current_route.route_id} at {bus.current_stop_id}."
                         )
-                        bus.current_route = None  # Mark route as completed
-                        # Now, the bus has no current route, so it will fall through to the next 'if' block
-                        # to check for the next scheduled trip or return to depot.
+                        bus.current_route = None  
                     else:
-                        # It's an intermediate stop, so immediately move to the next stop on the current route
                         bus.move_to_next_stop(self.current_time)
-                        continue  # Bus is now en route, done processing for this bus in this minute
-
-                # If bus has no current route (e.g., just finished a trip or waiting for first trip)
-                # Check for next scheduled trip and if it's time to depart
+                        continue  
                 if self.bus_schedules_planned.get(bus.bus_id):
                     next_scheduled_trip = self.bus_schedules_planned[bus.bus_id][0]
                     scheduled_departure_time = next_scheduled_trip[
@@ -1995,7 +1826,7 @@ class BusEmulator:
                                     "N/A",
                                     "WAITING",
                                 )
-                            continue  # Wait for the time to pass
+                            continue  
 
                     # If at the starting stop of the next scheduled trip and it's time to depart
                     if (
@@ -2004,7 +1835,7 @@ class BusEmulator:
                     ):
                         bus.current_time = (
                             self.current_time
-                        )  # Align bus time with current simulation time
+                        )  
                         bus.start_route(next_route, self.current_time)
                         logger.info(
                             f"Time {format_time(self.current_time)}: Bus {bus.bus_id} started scheduled trip on Route {next_route_id}."
@@ -2027,14 +1858,13 @@ class BusEmulator:
 
                         bus.move_to_next_stop(
                             self.current_time
-                        )  # Immediately move to the next stop after starting route
-                        continue  # Processed this bus for this minute, move to next bus or next minute
+                        )  
+                        continue  
 
                     elif (
                         bus.current_stop_id == next_route.stops_ids_in_order[0]
                         and self.current_time < scheduled_departure_time
                     ):
-                        # Bus is at the start of the next route but it's not time to depart yet
                         if not bus.schedule or bus.schedule[-1][8] != "WAITING":
                             bus.add_event_to_schedule(
                                 self.current_time,
@@ -2047,7 +1877,7 @@ class BusEmulator:
                                 "N/A",
                                 "WAITING",
                             )
-                        continue  # Wait for the time to pass
+                        continue  
 
                 # If no more scheduled trips and not en route, return to depot or idle
                 elif (
@@ -2109,8 +1939,8 @@ class BusEmulator:
                 self._return_bus_to_depot(bus, self.current_time)
 
         self.export_all_bus_schedules_to_separate_csvs()
-        self._calculate_passenger_metrics()  # This will now include the cumulative stop data
-        self._report_cumulative_stop_data()  # New method call
+        self._calculate_passenger_metrics()  
+        self._report_cumulative_stop_data()  
 
         if not self.use_optimized_schedule:
             self._save_emulator_schedule_to_db()
