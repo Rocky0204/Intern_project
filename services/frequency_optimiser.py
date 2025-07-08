@@ -3,14 +3,11 @@ from ortools.linear_solver import pywraplp
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
 import math
-import os  # Added for path manipulation
-import sys  # Added for path manipulation
+import os  
+import sys
 
-# Add the project root to sys.path to enable absolute imports
-# This assumes the script is located at your_project_root/services/frequency_optimiser.py
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Import your database models (changed to absolute imports)
 from api.models import (
     Bus,
     BusType,
@@ -26,7 +23,7 @@ from api.models import (
     JourneyPattern,
     Service,
 )
-from api.database import get_db  # Changed to absolute import
+from api.database import get_db 
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +64,6 @@ class FrequencyOptimiser:
 
     def fit_data(self, db: Session, start_time_minutes: int = 0):
         logger.info("Loading data from database for optimization...")
-
-        # Clear existing data structures for multiple runs
         self.demand = {}
         self.stops = []
         self.lookup_stops = {}
@@ -156,7 +151,7 @@ class FrequencyOptimiser:
         logger.info(f"Loaded {len(db_demand)} demand records.")
 
         for d in db_demand:
-            # Pre-filtering: Ignore demand below threshold
+            # Ignore demand below threshold
             if d.count < self.min_demand_threshold:
                 # logger.debug(f"Skipping demand {d.origin}-{d.destination} count {d.count} as it's below threshold {self.min_demand_threshold}")
                 continue
@@ -206,13 +201,10 @@ class FrequencyOptimiser:
         ):
             if r_def.route_id in self.routes_definitions:
                 self.routes_definitions[r_def.route_id].append(r_def)
-
-        # Initialize these lists to hold values for each route
         self.trip_length_on_route = [0] * len(self.routes)
         self.trip_duration_in_slots = [0] * len(self.routes)
 
         self.travel_times = {}
-        # Populate travel_times for segments (can be default if not in DB)
         for r_id in self.routes:
             route_def_list = self.routes_definitions.get(r_id, [])
             for i in range(len(route_def_list) - 1):
@@ -220,7 +212,7 @@ class FrequencyOptimiser:
                 to_sp = route_def_list[i + 1].stop_point_id
                 if (from_sp, to_sp) not in self.travel_times:
                     self.travel_times[(from_sp, to_sp)] = (
-                        5  # Default travel time of 5 minutes
+                        5 
                     )
 
         # Calculate trip lengths and durations per route
@@ -231,7 +223,6 @@ class FrequencyOptimiser:
                 for i in range(len(route_def_list) - 1):
                     from_sp = route_def_list[i].stop_point_id
                     to_sp = route_def_list[i + 1].stop_point_id
-                    # Sum up travel times for each segment of the route
                     current_route_trip_length_minutes += self.travel_times.get(
                         (from_sp, to_sp), 0
                     )
@@ -300,7 +291,7 @@ class FrequencyOptimiser:
                         i_idx = self.stops.index(origin_sp_id)
                         j_idx = self.stops.index(destination_sp_id)
                     except ValueError:
-                        continue  # Should not happen if fit_data is correct
+                        continue 
 
                     if (
                         i_idx == j_idx
@@ -323,13 +314,12 @@ class FrequencyOptimiser:
 
                     for (
                         d_slot_idx
-                    ) in slot_demands.keys():  # Loop over actual DEMAND START SLOTS
+                    ) in slot_demands.keys():  
                         for (
                             t_start_idx
                         ) in ts:  # Loop over ALL possible TRIP DEPARTURE SLOTS
-                            # Condition: A trip departing at t_start_idx can serve demand starting at d_slot_idx.
-                            # Assume a trip serves demand in its departure slot.
-                            if t_start_idx == d_slot_idx:  # NEW CONDITION ADDED HERE
+                            
+                            if t_start_idx == d_slot_idx: 
                                 y[r_idx, i_idx, j_idx, t_start_idx, d_slot_idx] = (
                                     self.solver.NumVar(
                                         0,
@@ -350,7 +340,7 @@ class FrequencyOptimiser:
             obj.SetCoefficient(var, 1)
 
         # Add a small penalty for each trip to encourage sparsity
-        TRIP_COST_PENALTY = 0.001  # A small value less than 1 passenger
+        TRIP_COST_PENALTY = 0.001 
         for r_idx in rts:
             for b_idx in bts:
                 for t_idx in ts:
@@ -362,13 +352,12 @@ class FrequencyOptimiser:
         for r_idx in rts:
             for (
                 current_slot_idx
-            ) in ts:  # This is the slot when passengers are ON THE BUS
+            ) in ts: 
                 total_capacity_at_current_slot = self.solver.Sum(
                     x[r_idx, b_idx, t_start_idx]
                     * self.max_capacity[self.bus_types[b_idx]]
                     for b_idx in bts
-                    for t_start_idx in ts  # Trip's departure slot
-                    # A trip departing at t_start_idx is active at current_slot_idx
+                    for t_start_idx in ts 
                     if t_start_idx
                     <= current_slot_idx
                     < t_start_idx + self.trip_duration_in_slots[r_idx]
@@ -395,7 +384,6 @@ class FrequencyOptimiser:
                     # Sum of passengers served for this O-D pair and demand slot across all relevant routes and trip starts
                     relevant_y_vars = []
                     for r_idx in rts:
-                        # Check if route covers O-D (already handled in y creation, but safety check)
                         if (
                             self.route_coverage[r_idx][i_idx] == 0
                             or self.route_coverage[r_idx][j_idx] == 0
@@ -445,17 +433,14 @@ class FrequencyOptimiser:
                     for j_idx in ss:
                         if i_idx == j_idx:
                             continue
-                        for t_start_idx in ts:  # Trip departure slot
+                        for t_start_idx in ts:  
                             # If a trip departs at t_start_idx and is active (carrying passengers) at current_slot_idx
                             if (
                                 t_start_idx
                                 <= current_slot_idx
                                 < t_start_idx + self.trip_duration_in_slots[r_idx]
                             ):
-                                # Then, any passengers served by this trip from any demand slot (d_slot_idx)
-                                # will be on board at current_slot_idx.
-                                # IMPORTANT: Now d_slot_idx MUST be equal to t_start_idx for y to exist based on the new y creation logic.
-                                # So, we only need to consider y where d_slot_idx == t_start_idx
+                                
                                 d_slot_idx = t_start_idx  # This implicitly enforces the new y creation rule here as well
                                 if (r_idx, i_idx, j_idx, t_start_idx, d_slot_idx) in y:
                                     relevant_y_vars_for_z.append(
@@ -521,7 +506,7 @@ class FrequencyOptimiser:
             "status": status_name_str,
             "total_passengers_served": 0,
             "schedule": [],
-            "buses_assigned_summary": {},  # New field for bus count summary
+            "buses_assigned_summary": {},
             "message": "Optimization completed.",
             "solver_runtime_ms": self.solver.wall_time(),
             "solver_iterations": self.solver.iterations(),
@@ -529,9 +514,8 @@ class FrequencyOptimiser:
 
         if status == pywraplp.Solver.OPTIMAL or status == pywraplp.Solver.FEASIBLE:
             logger.info("Optimization successful!.")
-            total_served = int(self.solver.Objective().Value())
+            _ = int(self.solver.Objective().Value())
             # The objective value will now be (Passengers - Penalty * Trips).
-            # To get actual passengers, we need to manually sum y values.
             actual_passengers_served = 0
             for key, var in y.items():
                 if var.solution_value() > 0.5:
@@ -605,8 +589,7 @@ class FrequencyOptimiser:
                             x[r_idx, b_idx, t_idx].solution_value()
                         )
 
-                        # ONLY ADD TO SCHEDULE IF THE OPTIMIZER DECIDED TO RUN THIS TRIP
-                        if num_trips_to_assign > 0:  # <-- Add this condition
+                        if num_trips_to_assign > 0:  
                             for _ in range(num_trips_to_assign):
                                 bus_reg_num_assigned = None
                                 # Only assign a physical bus if available and within the count
@@ -665,7 +648,7 @@ class FrequencyOptimiser:
 
                                 new_vj = VehicleJourney(
                                     departure_time=departure_time_obj,
-                                    dayshift=1,  # Default to day shift
+                                    dayshift=1, 
                                     jp_id=assigned_jp.jp_id,
                                     block_id=assigned_block.block_id,
                                     operator_id=default_operator.operator_id,
@@ -688,7 +671,6 @@ class FrequencyOptimiser:
 
                                 db.add(new_vj)
 
-                                # Add to structured output
                                 result["schedule"].append(
                                     {
                                         "route_id": route_id,
@@ -747,9 +729,9 @@ if __name__ == "__main__":
             slot_length=60,
             layover=10,
             min_demand_threshold=1.0,
-            min_frequency_trips_per_period=1,  # Relaxed: At least 1 trip
+            min_frequency_trips_per_period=1, 
             min_frequency_period_minutes=24
-            * 60,  # Relaxed: Over the entire day (1440 minutes)
+            * 60,
         )
         with next(get_db()) as db:
             optimiser.fit_data(db, start_time_minutes=0)
@@ -757,7 +739,6 @@ if __name__ == "__main__":
                 db, start_time_minutes=0
             )
 
-            # Print the structured results
             print("\n--- Optimization Results Summary ---")
             print(f"Status: {optimisation_results['status']}")
             print(
@@ -766,7 +747,7 @@ if __name__ == "__main__":
             print(f"Message: {optimisation_results['message']}")
             print(f"Solver Runtime (ms): {optimisation_results['solver_runtime_ms']}")
             print(f"Solver Iterations: {optimisation_results['solver_iterations']}")
-            print("\n--- Buses Assigned Summary ---")  # New print statement
+            print("\n--- Buses Assigned Summary ---") 
             for bus_type_name, count in optimisation_results[
                 "buses_assigned_summary"
             ].items():
@@ -790,35 +771,3 @@ if __name__ == "__main__":
 
         traceback.print_exc()
 
-# "
-# You're right to point out the difference between the terminal output and the API response for the `frequency_optimiser`. It's a common issue when changes aren't fully reloaded by the server.
-
-# Let's address both your points:
-
-# 1.  **Too much detailed schedule in API response:** The `frequency_optimiser.py` Canvas you provided (and which is currently open on the right) *already includes* the crucial line `if num_trips_to_assign > 0:` within the loop that builds the `result["schedule"]`. This condition is designed to ensure that only trips where the optimizer actually assigned a bus (i.e., `x[r_idx, b_idx, t_idx].solution_value()` is greater than zero) are added to the schedule list. The fact that your API response is still showing a very long schedule with many `null` assignments strongly indicates that the FastAPI server is running an **older version** of this file.
-
-# 2.  **"Small Bus" count incorrect:** Similarly, the `buses_assigned_summary` calculation is also present in the `frequency_optimiser.py` Canvas. If the numbers are different in the API response compared to your direct script run, it's another symptom of the server not using the latest code. The `assigned_bus_reg_num: null` happens when the optimizer determines a trip is needed, but there isn't a *physical* bus (from your `Bus` table) available to be uniquely assigned to that specific trip instance. The "Buses Assigned Summary" gives the total count of *required* trips (sum of `x` variables) by bus type, which might be different from the number of *physically assigned* buses if your `Bus` table has fewer entries than the optimizer needs.
-
-# **The solution is to ensure your FastAPI server fully reloads the updated `frequency_optimiser.py` Canvas.**
-
-# **Here are the steps you need to take:**
-
-# 1.  **STOP THE FASTAPI SERVER COMPLETELY:**
-#     * Go to the terminal window where `uvicorn api.main:app --reload` is running.
-#     * Press `CTRL + C` (you might need to press it a couple of times) until the server completely shuts down and you see your command prompt again. This is the most critical step to clear any cached versions of the code.
-
-# 2.  **VERIFY `frequency_optimiser.py` CONTENT:**
-#     * Open your `C:\Users\SWADHA SWAROOP\Desktop\intern 4\services\frequency_optimiser.py` file.
-#     * **Ensure its content exactly matches the Canvas you provided in your prompt and that is currently open on the right.** Specifically, confirm that the `if num_trips_to_assign > 0:` line is present as shown.
-
-# 3.  **RESTART THE FASTAPI SERVER:**
-#     * In the same terminal (or a new one, but make sure you are in your project's root directory: `C:\Users\SWADHA SWAROOP\Desktop\intern 4\`), start the FastAPI server again:
-#         ```bash
-#         uvicorn api.main:app --reload
-#         ```
-#     * Wait for it to fully start and show `INFO: Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)`.
-
-# 4.  **TEST THE API AGAIN:**
-#     * Now, make a `POST` request to `http://127.0.0.1:8000/optimize/run` using your browser (by going to `/docs` and trying it out), Postman, or your `test_api.py` script.
-
-# After these steps, your API response should now match the concise and accurate output you're getting in your terminal, including the correct `buses_assigned_summary` and the filtered schedu
