@@ -475,32 +475,32 @@ class FrequencyOptimiser:
                     )
 
         # Constraint 4: Minimum Frequency Constraint
-        min_freq_period_slots = math.ceil(
-            self.min_frequency_period_minutes / self.slot_length
-        )
-        if min_freq_period_slots <= 0:
-            logger.warning(
-                "Minimum frequency period is too small or invalid. Skipping min frequency constraint."
-            )
-        else:
-            for r_idx in rts:
-                for period_start_slot in range(
-                    0, self.num_slots, min_freq_period_slots
-                ):
-                    period_end_slot = min(
-                        period_start_slot + min_freq_period_slots - 1,
-                        self.num_slots - 1,
-                    )
+        # min_freq_period_slots = math.ceil(
+        #     self.min_frequency_period_minutes / self.slot_length
+        # )
+        # if min_freq_period_slots <= 0:
+        #     logger.warning(
+        #         "Minimum frequency period is too small or invalid. Skipping min frequency constraint."
+        #     )
+        # else:
+        #     for r_idx in rts:
+        #         for period_start_slot in range(
+        #             0, self.num_slots, min_freq_period_slots
+        #         ):
+        #             period_end_slot = min(
+        #                 period_start_slot + min_freq_period_slots - 1,
+        #                 self.num_slots - 1,
+        #             )
 
-                    trips_in_period = self.solver.Sum(
-                        x[r_idx, b_idx, t_idx]
-                        for b_idx in bts
-                        for t_idx in range(period_start_slot, period_end_slot + 1)
-                    )
-                    self.solver.Add(
-                        trips_in_period >= self.min_frequency_trips_per_period,
-                        f"MinFreq_R{r_idx}_Period{period_start_slot}-{period_end_slot}",
-                    )
+        #             trips_in_period = self.solver.Sum(
+        #                 x[r_idx, b_idx, t_idx]
+        #                 for b_idx in bts
+        #                 for t_idx in range(period_start_slot, period_end_slot + 1)
+        #             )
+        #             self.solver.Add(
+        #                 trips_in_period >= self.min_frequency_trips_per_period,
+        #                 f"MinFreq_R{r_idx}_Period{period_start_slot}-{period_end_slot}",
+        #             )
 
         logger.info("Solving optimization problem...")
         status = self.solver.Solve()
