@@ -25,27 +25,23 @@ logger = logging.getLogger(__name__)
 
 def insert_data(db: Session):
     logger.info("Inserting dummy data into the database...")
-
-    # Ensure these are created first as they are foreign keys for Service and Line
     # 1. Operator
     op1 = Operator(operator_code="OP1", name="City Bus Services")
     db.add(op1)
-    db.flush()  # Flush to get operator_id
+    db.flush()
 
-    # 2. Garage (Added for Bus foreign key)
+    # 2. Garage
     garage1 = Garage(name="Main Depot", capacity=100, latitude=51.6, longitude=0.2)
     db.add(garage1)
     db.flush()
 
     # 3. BusType
-    # Corrected: Removed 'short_name' and 'speed_limit' as they are not in the BusType model based on previous error
     bus_type_small = BusType(name="Small Bus", capacity=30)
     bus_type_large = BusType(name="Large Bus", capacity=60)
     db.add_all([bus_type_small, bus_type_large])
     db.flush()
 
     # 4. StopArea
-    # Assuming stop_area_code can be integer based on your current code.
     sa1 = StopArea(
         stop_area_code=1,
         admin_area_code="ADM1",
@@ -65,7 +61,6 @@ def insert_data(db: Session):
     db.flush()
 
     # 5. StopPoint
-    # Assuming atco_code can be integer. Added sp4 for sa3.
     sp1 = StopPoint(
         atco_code=1001,
         name="Stop 1A",
@@ -93,7 +88,7 @@ def insert_data(db: Session):
         latitude=51.5200,
         longitude=0.1400,
         stop_area_code=sa3.stop_area_code,
-    )  # Added StopPoint for StopArea 3
+    )
     db.add_all([sp1, sp2, sp3, sp4])
     db.flush()
 
@@ -118,26 +113,25 @@ def insert_data(db: Session):
     rd2 = RouteDefinition(
         route_id=route1.route_id, sequence=2, stop_point_id=sp2.atco_code
     )
-    # Route 2 now explicitly includes sp4 (StopArea 3)
     rd3 = RouteDefinition(
         route_id=route2.route_id, sequence=1, stop_point_id=sp1.atco_code
     )
     rd4 = RouteDefinition(
         route_id=route2.route_id, sequence=2, stop_point_id=sp4.atco_code
-    )  # Route through StopArea 3
+    )
     rd5 = RouteDefinition(
         route_id=route2.route_id, sequence=3, stop_point_id=sp3.atco_code
-    )  # Continue to StopArea 2
+    )
     db.add_all([rd1, rd2, rd3, rd4, rd5])
     db.flush()
 
-    # 8. Line (requires operator_id)
+    # 8. Line
     line1 = Line(line_name="Line 1", operator_id=op1.operator_id)
     line2 = Line(line_name="Line 2", operator_id=op1.operator_id)
     db.add_all([line1, line2])
     db.flush()
 
-    # 9. Service (requires operator_id and line_id)
+    # 9. Service
     service1 = Service(
         service_code="SER001",
         name="Morning Express",
@@ -148,7 +142,7 @@ def insert_data(db: Session):
     db.add(service1)
     db.flush()
 
-    # 10. JourneyPattern (requires route_id, service_id, line_id, operator_id)
+    # 10. JourneyPattern
     jp1 = JourneyPattern(
         jp_code="JP001",
         name="Central Loop AM",
@@ -160,7 +154,7 @@ def insert_data(db: Session):
     db.add(jp1)
     db.flush()
 
-    # 11. Bus (requires bus_type_id, garage_id, operator_id)
+    # 11. Bus
     bus1 = Bus(
         bus_id="B001",
         reg_num="XYZ123",
@@ -178,7 +172,7 @@ def insert_data(db: Session):
     db.add_all([bus1, bus2])
     db.flush()
 
-    # 12. Block (requires operator_id, bus_type_id)
+    # 12. Block
     block1 = Block(
         name="Morning Block",
         operator_id=op1.operator_id,
@@ -192,7 +186,7 @@ def insert_data(db: Session):
     db.add_all([block1, block2])
     db.flush()
 
-    # 13. Demand (between StopAreas)
+    # 13. Demand
     demand1 = Demand(
         origin=sa1.stop_area_code,
         destination=sa3.stop_area_code,
@@ -222,14 +216,11 @@ def insert_data(db: Session):
 
 if __name__ == "__main__":
     try:
-        # Delete the database file before recreating it
         import os
 
         if os.path.exists("pluto.db"):
             os.remove("pluto.db")
             logger.info("Existing pluto.db removed.")
-
-        # This block should ONLY call insert_data, as create_db.py handles table creation.
         from api.database import get_db
 
         with next(get_db()) as db:
