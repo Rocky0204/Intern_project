@@ -1,9 +1,0 @@
-Time,Event,Stop ID,Passengers Onboard,Passengers Waiting,Boarded,Alighted,Direction,Status
-08:00,Bus L1 initialized at depot,1001,0,0,0,0,N/A,INITIALIZED
-08:00,Start Route 2,1001,50,0,50,0,N/A,AT_STOP
-08:00,Departed 1001 towards 3001,1001,50,0,0,0,Outbound,EN_ROUTE_DEPARTURE
-08:05,Arrived At Stop 3001,3001,0,0,0,50,Outbound,AT_STOP
-08:05,Departed 3001 towards 2001,3001,0,0,0,0,Outbound,EN_ROUTE_DEPARTURE
-08:10,Arrived At Stop 2001,2001,0,0,0,0,Outbound,AT_STOP
-08:10,Returned to Depot 1001,1001,0,0,0,0,N/A,AT_DEPOT
-08:11,Idle,1001,0,0,0,0,N/A,IDLE
