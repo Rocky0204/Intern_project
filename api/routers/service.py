@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status  
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
 from ..database import get_db
-from ..models import Service, Operator, Line  
+from ..models import Service, Operator, Line
 from ..schemas import ServiceCreate, ServiceRead, ServiceUpdate
 
 router = APIRouter(prefix="/services", tags=["services"])
@@ -36,14 +36,12 @@ def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[ServiceRead])
 def read_services(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-   
     services = db.query(Service).offset(skip).limit(limit).all()
     return services
 
 
 @router.get("/{service_id}", response_model=ServiceRead)
 def read_service(service_id: int, db: Session = Depends(get_db)):
-  
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -54,7 +52,6 @@ def read_service(service_id: int, db: Session = Depends(get_db)):
 def update_service(
     service_id: int, service: ServiceUpdate, db: Session = Depends(get_db)
 ):
-    
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -70,7 +67,6 @@ def update_service(
 
 @router.delete("/{service_id}", response_model=dict)
 def delete_service(service_id: int, db: Session = Depends(get_db)):
-    
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")

@@ -3,7 +3,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
-from datetime import time  
+from datetime import time
 
 import os
 import sys
@@ -66,7 +66,7 @@ def db_session(setup_db):
     session = TestingSessionLocal(bind=connection)
 
     session.query(EmulatorLog).delete()
-    session.query(Demand).delete() 
+    session.query(Demand).delete()
     session.query(StopActivity).delete()
     session.query(VehicleJourney).delete()
     session.query(JourneyPatternDefinition).delete()
@@ -82,7 +82,7 @@ def db_session(setup_db):
     session.query(Garage).delete()
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
-    session.commit() 
+    session.commit()
 
     try:
         yield session
@@ -95,12 +95,12 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
         finally:
-            pass  
+            pass
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
@@ -141,7 +141,6 @@ def test_demand(
     test_stop_area_origin: StopArea,
     test_stop_area_destination: StopArea,
 ):
-
     demand_entry = Demand(
         origin=test_stop_area_origin.stop_area_code,
         destination=test_stop_area_destination.stop_area_code,
@@ -217,21 +216,15 @@ def test_create_demand_duplicate_entry(
         end_time=initial_demand_data["end_time"],
     )
     db_session.add(initial_demand)
-    db_session.commit()  
-    db_session.expunge(
-        initial_demand
-    )  
+    db_session.commit()
+    db_session.expunge(initial_demand)
 
     duplicate_data = {
         "origin": initial_demand_data["origin"],
         "destination": initial_demand_data["destination"],
-        "count": 20.0,  
-        "start_time": format_time_for_url(
-            initial_demand_data["start_time"]
-        ),  
-        "end_time": format_time_for_url(
-            initial_demand_data["end_time"]
-        ), 
+        "count": 20.0,
+        "start_time": format_time_for_url(initial_demand_data["start_time"]),
+        "end_time": format_time_for_url(initial_demand_data["end_time"]),
     }
     response = client.post("/demand/", json=duplicate_data)
     assert response.status_code == status.HTTP_409_CONFLICT
@@ -245,7 +238,7 @@ def test_create_demand_invalid_origin(
     client: TestClient, db_session: Session, test_stop_area_destination: StopArea
 ):
     demand_data = {
-        "origin": 99999, 
+        "origin": 99999,
         "destination": test_stop_area_destination.stop_area_code,
         "count": 5.0,
         "start_time": "11:00:00",
@@ -261,7 +254,7 @@ def test_create_demand_invalid_destination(
 ):
     demand_data = {
         "origin": test_stop_area_origin.stop_area_code,
-        "destination": 99999,  
+        "destination": 99999,
         "count": 7.0,
         "start_time": "13:00:00",
         "end_time": "14:00:00",

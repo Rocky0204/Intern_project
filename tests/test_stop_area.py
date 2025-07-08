@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 from api.main import app
 from api.database import get_db
@@ -55,7 +56,6 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-   
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
@@ -74,9 +74,9 @@ def db_session(setup_db):
     session.query(Line).delete()
     session.query(Operator).delete()
     session.query(BusType).delete()
-    session.query(Garage).delete() 
+    session.query(Garage).delete()
     session.query(StopPoint).delete()
-    session.query(StopArea).delete()  
+    session.query(StopArea).delete()
     session.commit()
 
     try:
@@ -89,7 +89,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
@@ -100,8 +99,6 @@ def client(db_session: Session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-
-
 
 
 @pytest.fixture(scope="function")
@@ -117,8 +114,6 @@ def test_stop_area(db_session: Session):
     db_session.commit()
     db_session.refresh(stop_area)
     return stop_area
-
-
 
 
 def test_create_stop_area(client: TestClient, db_session: Session):
@@ -146,7 +141,7 @@ def test_create_stop_area_duplicate_admin_area_code(
 ):
     duplicate_data = {
         "stop_area_code": 1003,
-        "admin_area_code": test_stop_area.admin_area_code, 
+        "admin_area_code": test_stop_area.admin_area_code,
         "name": "Another Terminal",
         "is_terminal": True,
     }
@@ -206,10 +201,8 @@ def test_update_stop_area_duplicate_admin_area_code(
     db_session.commit()
     db_session.refresh(sa2)
 
-    test_sa = (
-        db_session.query(StopArea).filter(StopArea.stop_area_code == 1001).first()
-    )  
-    if not test_sa:  
+    test_sa = db_session.query(StopArea).filter(StopArea.stop_area_code == 1001).first()
+    if not test_sa:
         test_sa = StopArea(
             stop_area_code=1001,
             admin_area_code="ADM001",
@@ -220,9 +213,7 @@ def test_update_stop_area_duplicate_admin_area_code(
         db_session.commit()
         db_session.refresh(test_sa)
 
-    update_data = {
-        "admin_area_code": sa2.admin_area_code
-    }  
+    update_data = {"admin_area_code": sa2.admin_area_code}
     response = client.put(f"/stop_areas/{test_sa.stop_area_code}", json=update_data)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert "already exists" in response.json()["detail"]
@@ -233,9 +224,7 @@ def test_delete_stop_area(
 ):
     stop_area_code_to_delete = test_stop_area.stop_area_code
     response = client.delete(f"/stop_areas/{stop_area_code_to_delete}")
-    assert (
-        response.status_code == status.HTTP_204_NO_CONTENT
-    )  
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
     db_sa = (
         db_session.query(StopArea)

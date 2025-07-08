@@ -61,14 +61,13 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
     session.query(EmulatorLog).delete()
-    session.query(VehicleJourney).delete()  
-    session.query(Block).delete() 
+    session.query(VehicleJourney).delete()
+    session.query(Block).delete()
     session.query(Demand).delete()
     session.query(StopActivity).delete()
     session.query(JourneyPatternDefinition).delete()
@@ -83,7 +82,7 @@ def db_session(setup_db):
     session.query(Garage).delete()
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
-    session.commit() 
+    session.commit()
     try:
         yield session
     finally:
@@ -94,7 +93,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
@@ -105,8 +103,6 @@ def client(db_session: Session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-
-
 
 
 @pytest.fixture(scope="function")
@@ -160,7 +156,7 @@ def test_create_block(
 def test_create_block_invalid_operator(client: TestClient, test_bus_type: BusType):
     block_data = {
         "name": "Invalid Operator Block",
-        "operator_id": 99999,  
+        "operator_id": 99999,
         "bus_type_id": test_bus_type.type_id,
     }
     response = client.post("/blocks/", json=block_data)
@@ -172,7 +168,7 @@ def test_create_block_invalid_bus_type(client: TestClient, test_operator: Operat
     block_data = {
         "name": "Invalid Bus Type Block",
         "operator_id": test_operator.operator_id,
-        "bus_type_id": 99999,  
+        "bus_type_id": 99999,
     }
     response = client.post("/blocks/", json=block_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -204,8 +200,8 @@ def test_update_block(
 ):
     update_data = {
         "name": "Updated Block Name",
-        "operator_id": test_operator.operator_id, 
-        "bus_type_id": test_bus_type.type_id,  
+        "operator_id": test_operator.operator_id,
+        "bus_type_id": test_bus_type.type_id,
     }
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_200_OK
@@ -216,14 +212,14 @@ def test_update_block(
 
 
 def test_update_block_invalid_operator(client: TestClient, test_block: Block):
-    update_data = {"operator_id": 99999}  
+    update_data = {"operator_id": 99999}
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Operator with ID 99999 not found" in response.json()["detail"]
 
 
 def test_update_block_invalid_bus_type(client: TestClient, test_block: Block):
-    update_data = {"bus_type_id": 99999} 
+    update_data = {"bus_type_id": 99999}
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "BusType with ID 99999 not found" in response.json()["detail"]

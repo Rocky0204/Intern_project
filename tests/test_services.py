@@ -44,7 +44,7 @@ def db_session(setup_db):
         yield session
     finally:
         session.close()
-        transaction.rollback()  
+        transaction.rollback()
         connection.close()
 
 
@@ -59,7 +59,7 @@ def client(db_session: Session):
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
-    app.dependency_overrides.clear()  
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -190,7 +190,7 @@ def test_create_service_with_invalid_operator(
     invalid_data = {
         "service_code": "S3",
         "name": "Invalid Service",
-        "operator_id": 99999, 
+        "operator_id": 99999,
         "line_id": test_line.line_id,
     }
 
@@ -206,7 +206,7 @@ def test_create_service_with_invalid_line(
         "service_code": "S4",
         "name": "Invalid Service",
         "operator_id": test_operator.operator_id,
-        "line_id": 99999,  
+        "line_id": 99999,
     }
 
     response = client.post("/services/", json=invalid_data)

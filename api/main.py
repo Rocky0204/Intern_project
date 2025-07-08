@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from api.routers.all_routers import all_routers
+
 app = FastAPI()
 
 for router in all_routers:

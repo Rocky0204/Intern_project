@@ -17,7 +17,10 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 
-@router.post("/run", response_model=EmulatorLogRead, status_code=status.HTTP_202_ACCEPTED)
+
+@router.post(
+    "/run", response_model=EmulatorLogRead, status_code=status.HTTP_202_ACCEPTED
+)
 async def run_frequency_optimization(
     num_slots: int = 24,
     slot_length: int = 60,
@@ -26,7 +29,7 @@ async def run_frequency_optimization(
     min_frequency_trips_per_period: int = 1,
     min_frequency_period_minutes: int = 60,
     start_time_minutes: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     logger.info("API: Received request to run frequency optimization.")
 
@@ -50,34 +53,46 @@ async def run_frequency_optimization(
         )
 
         optimiser.fit_data(db, start_time_minutes=start_time_minutes)
-        
-        optimization_result = optimiser.optimise_frequencies(db, start_time_minutes=start_time_minutes)
-        
+
+        optimization_result = optimiser.optimise_frequencies(
+            db, start_time_minutes=start_time_minutes
+        )
+
         logger.debug(f"Optimizer returned: {optimization_result}")
-        
+
         if isinstance(optimization_result, dict):
             db_log_entry.optimization_details = json.dumps(optimization_result)
         else:
-            db_log_entry.optimization_details = None 
+            db_log_entry.optimization_details = None
 
-
-        if isinstance(optimization_result, dict) and optimization_result.get("status") in ["OPTIMAL", "FEASIBLE"]:
+        if isinstance(optimization_result, dict) and optimization_result.get(
+            "status"
+        ) in ["OPTIMAL", "FEASIBLE"]:
             db_log_entry.status = RunStatus.COMPLETED.value
-            logger.info(f"API: Optimization run_id {db_log_entry.run_id} completed successfully.")
+            logger.info(
+                f"API: Optimization run_id {db_log_entry.run_id} completed successfully."
+            )
         else:
             db_log_entry.status = RunStatus.FAILED.value
-            logger.error(f"API: Optimization run_id {db_log_entry.run_id} failed with result: {optimization_result}")
-        
+            logger.error(
+                f"API: Optimization run_id {db_log_entry.run_id} failed with result: {optimization_result}"
+            )
+
         db_log_entry.last_updated = datetime.now()
         db.commit()
         db.refresh(db_log_entry)
-        
+
         parsed_optimization_details = None
-        if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
+        if (
+            isinstance(db_log_entry.optimization_details, str)
+            and db_log_entry.optimization_details
+        ):
             try:
-                parsed_optimization_details = json.loads(db_log_entry.optimization_details)
+                parsed_optimization_details = json.loads(
+                    db_log_entry.optimization_details
+                )
             except json.JSONDecodeError:
-                parsed_optimization_details = None 
+                parsed_optimization_details = None
 
         log_data_for_pydantic = {
             "run_id": db_log_entry.run_id,
@@ -86,24 +101,29 @@ async def run_frequency_optimization(
             "last_updated": db_log_entry.last_updated,
             "optimization_details": parsed_optimization_details,
         }
-        
-        return log_data_for_pydantic 
+
+        return log_data_for_pydantic
 
     except Exception as e:
-        logger.exception(f"API: An error occurred during frequency optimization run_id {db_log_entry.run_id}: {e}")
+        logger.exception(
+            f"API: An error occurred during frequency optimization run_id {db_log_entry.run_id}: {e}"
+        )
         db_log_entry.status = RunStatus.FAILED.value
         db_log_entry.last_updated = datetime.now()
         db.commit()
         db.refresh(db_log_entry)
-        
+
         parsed_details_on_error = None
-        if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
+        if (
+            isinstance(db_log_entry.optimization_details, str)
+            and db_log_entry.optimization_details
+        ):
             try:
                 parsed_details_on_error = json.loads(db_log_entry.optimization_details)
             except json.JSONDecodeError:
                 parsed_details_on_error = None
-        
-        error_log_data = {
+
+        _ = {
             "run_id": db_log_entry.run_id,
             "status": db_log_entry.status,
             "started_at": db_log_entry.started_at,
@@ -112,6 +132,9 @@ async def run_frequency_optimization(
         }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": f"Optimization failed for run_id {db_log_entry.run_id}", "details": str(e)},
-            headers={"X-Content-Type-Options": "nosniff"} 
+            detail={
+                "message": f"Optimization failed for run_id {db_log_entry.run_id}",
+                "details": str(e),
+            },
+            headers={"X-Content-Type-Options": "nosniff"},
         )

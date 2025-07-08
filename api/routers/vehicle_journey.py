@@ -11,7 +11,7 @@ from ..models import (
     Operator,
     Line,
     Service,
-) 
+)
 from ..schemas import VehicleJourneyCreate, VehicleJourneyRead, VehicleJourneyUpdate
 
 router = APIRouter(prefix="/vehicle_journeys", tags=["vehicle_journeys"])
@@ -21,7 +21,6 @@ router = APIRouter(prefix="/vehicle_journeys", tags=["vehicle_journeys"])
     "/", response_model=VehicleJourneyRead, status_code=status.HTTP_201_CREATED
 )
 def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_db)):
-    
     journey_pattern = (
         db.query(JourneyPattern).filter(JourneyPattern.jp_id == vj.jp_id).first()
     )
@@ -77,14 +76,12 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
 def read_vehicle_journeys(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
-    
     vehicle_journeys = db.query(VehicleJourney).offset(skip).limit(limit).all()
     return vehicle_journeys
 
 
 @router.get("/{vj_id}", response_model=VehicleJourneyRead)
 def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
-    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(
@@ -97,7 +94,6 @@ def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
 def update_vehicle_journey(
     vj_id: int, vj: VehicleJourneyUpdate, db: Session = Depends(get_db)
 ):
-    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(
@@ -177,7 +173,6 @@ def update_vehicle_journey(
 
 @router.delete("/{vj_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
-    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(

@@ -1,13 +1,13 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from datetime import time  
+from datetime import time
 
 from api.models import JourneyPattern, JourneyPatternDefinition
+
 
 def test_create_journey_pattern_definition(
     client_with_db: TestClient, db_session: Session
 ):
-   
     jp_data = {
         "jp_code": "JP_DEF_PARENT_CREATE",
         "line_id": 1,
@@ -26,8 +26,8 @@ def test_create_journey_pattern_definition(
         "jp_id": jp_id,
         "stop_point_atco_code": 1001,
         "sequence": 1,
-        "arrival_time": "10:00:00",  
-        "departure_time": "10:05:00",  
+        "arrival_time": "10:00:00",
+        "departure_time": "10:05:00",
     }
 
     response = client_with_db.post("/journey_pattern_definitions/", json=test_data_api)
@@ -43,7 +43,6 @@ def test_create_journey_pattern_definition(
 def test_read_journey_pattern_definitions(
     client_with_db: TestClient, db_session: Session
 ):
-    
     jp_data = {
         "jp_code": "JP_DEF_PARENT_READ_ALL",
         "line_id": 2,
@@ -84,7 +83,7 @@ def test_read_journey_pattern_definitions(
     response = client_with_db.get("/journey_pattern_definitions/")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 2  
+    assert len(data) >= 2
 
     found_def1 = next(
         (d for d in data if d["jp_id"] == jp_id and d["sequence"] == 1), None
@@ -107,7 +106,6 @@ def test_read_journey_pattern_definitions(
 def test_read_single_journey_pattern_definition(
     client_with_db: TestClient, db_session: Session
 ):
-  
     jp_data = {
         "jp_code": "JP_DEF_PARENT_READ_SINGLE",
         "line_id": 3,
@@ -148,7 +146,6 @@ def test_read_single_journey_pattern_definition(
 def test_update_journey_pattern_definition(
     client_with_db: TestClient, db_session: Session
 ):
-    
     jp_data = {
         "jp_code": "JP_DEF_PARENT_UPDATE",
         "line_id": 4,
@@ -177,8 +174,8 @@ def test_update_journey_pattern_definition(
     sequence = db_def.sequence
 
     update_data = {
-        "stop_point_atco_code": 3002,  
-        "arrival_time": "12:05:00",  
+        "stop_point_atco_code": 3002,
+        "arrival_time": "12:05:00",
     }
 
     response = client_with_db.put(
@@ -209,7 +206,6 @@ def test_update_journey_pattern_definition(
 def test_delete_journey_pattern_definition(
     client_with_db: TestClient, db_session: Session
 ):
-   
     jp_data = {
         "jp_code": "JP_DEF_PARENT_DELETE",
         "line_id": 5,

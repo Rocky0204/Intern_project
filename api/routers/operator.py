@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from api.database import get_db
-from api.models import *
-from api.schemas import *
+from api.models import VehicleJourney, Block, Line, Service, Route, Bus, Operator
+from ..schemas import OperatorUpdate, OperatorRead, OperatorCreate
+
 
 router = APIRouter(prefix="/operators", tags=["operators"])
 

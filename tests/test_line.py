@@ -60,7 +60,6 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
@@ -82,12 +81,12 @@ def db_session(setup_db):
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
     session.query(Garage).delete()
-    session.commit()  
+    session.commit()
 
     try:
         yield session
     finally:
-        if transaction.is_active:  
+        if transaction.is_active:
             transaction.rollback()
         session.close()
         connection.close()
@@ -95,7 +94,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
@@ -108,22 +106,20 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-
 @pytest.fixture(scope="function")
 def test_operator(db_session: Session):
     operator = Operator(operator_code="OP1", name="Test Operator")
     db_session.add(operator)
-    db_session.commit()  
+    db_session.commit()
     db_session.refresh(operator)
     return operator
 
 
 @pytest.fixture(scope="function")
 def test_line(db_session: Session, test_operator: Operator):
-    
     line = Line(line_name="Test Line 1", operator_id=test_operator.operator_id)
     db_session.add(line)
-    db_session.commit() 
+    db_session.commit()
     db_session.refresh(line)
     return line
 
@@ -145,11 +141,11 @@ def test_create_line_duplicate_name(
         line_name="Duplicate Line Name", operator_id=test_operator.operator_id
     )
     db_session.add(initial_line)
-    db_session.commit()  
+    db_session.commit()
     db_session.refresh(initial_line)
 
     line_data = {
-        "line_name": "Duplicate Line Name",  
+        "line_name": "Duplicate Line Name",
         "operator_id": test_operator.operator_id,
     }
     response = client.post("/lines/", json=line_data)
@@ -163,7 +159,7 @@ def test_create_line_duplicate_name(
 def test_create_line_invalid_operator(client: TestClient):
     line_data = {
         "line_name": "Line with Invalid Operator",
-        "operator_id": 99999,  
+        "operator_id": 99999,
     }
     response = client.post("/lines/", json=line_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -190,7 +186,7 @@ def test_read_lines(client: TestClient, test_line: Line):
 def test_update_line(client: TestClient, test_line: Line, test_operator: Operator):
     update_data = {
         "line_name": "Updated Line Name",
-        "operator_id": test_operator.operator_id, 
+        "operator_id": test_operator.operator_id,
     }
     response = client.put(f"/lines/{test_line.line_id}", json=update_data)
     assert response.status_code == status.HTTP_200_OK
@@ -200,7 +196,7 @@ def test_update_line(client: TestClient, test_line: Line, test_operator: Operato
 
 
 def test_update_line_invalid_operator(client: TestClient, test_line: Line):
-    update_data = {"operator_id": 99999}  
+    update_data = {"operator_id": 99999}
     response = client.put(f"/lines/{test_line.line_id}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Operator with ID 99999 not found" in response.json()["detail"]

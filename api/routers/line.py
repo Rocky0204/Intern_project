@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 
 from ..database import get_db
-from ..models import Line, Operator 
+from ..models import Line, Operator
 from ..schemas import LineCreate, LineRead, LineUpdate
 
 router = APIRouter(prefix="/lines", tags=["lines"])
@@ -43,7 +43,6 @@ def read_lines(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 @router.get("/{line_id}", response_model=LineRead)
 def read_line(line_id: int, db: Session = Depends(get_db)):
-
     db_line = db.query(Line).filter(Line.line_id == line_id).first()
     if db_line is None:
         raise HTTPException(
@@ -54,7 +53,6 @@ def read_line(line_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{line_id}", response_model=LineRead)
 def update_line(line_id: int, line: LineUpdate, db: Session = Depends(get_db)):
-  
     db_line = db.query(Line).filter(Line.line_id == line_id).first()
     if db_line is None:
         raise HTTPException(
@@ -92,7 +90,6 @@ def update_line(line_id: int, line: LineUpdate, db: Session = Depends(get_db)):
 
 @router.delete("/{line_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_line(line_id: int, db: Session = Depends(get_db)):
-  
     db_line = db.query(Line).filter(Line.line_id == line_id).first()
     if db_line is None:
         raise HTTPException(

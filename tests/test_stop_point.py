@@ -60,7 +60,6 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-   
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
@@ -81,7 +80,7 @@ def db_session(setup_db):
     session.query(BusType).delete()
     session.query(Garage).delete()
     session.query(StopPoint).delete()
-    session.query(StopArea).delete()  
+    session.query(StopArea).delete()
     session.commit()
 
     try:
@@ -94,7 +93,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
@@ -107,13 +105,11 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-
-
 @pytest.fixture(scope="function")
 def test_stop_area(db_session: Session):
     stop_area = StopArea(
         stop_area_code=1001,
-        admin_area_code="ADM_SP_001", 
+        admin_area_code="ADM_SP_001",
         name="Test Stop Area for SP",
         is_terminal=True,
     )
@@ -137,8 +133,6 @@ def test_stop_point(db_session: Session, test_stop_area: StopArea):
     db_session.commit()
     db_session.refresh(stop_point)
     return stop_point
-
-
 
 
 def test_create_stop_point(
@@ -172,7 +166,7 @@ def test_create_stop_point_invalid_stop_area(client: TestClient, db_session: Ses
         "name": "Invalid Stop Point",
         "latitude": 51.52,
         "longitude": -0.12,
-        "stop_area_code": 99999,  
+        "stop_area_code": 99999,
     }
     response = client.post("/stop_points/", json=stop_point_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -215,7 +209,7 @@ def test_update_stop_point(
     update_data = {
         "name": "Updated Stop Point Name",
         "latitude": 51.55,
-        "stop_area_code": new_stop_area.stop_area_code,  
+        "stop_area_code": new_stop_area.stop_area_code,
     }
     response = client.put(f"/stop_points/{test_stop_point.atco_code}", json=update_data)
     assert response.status_code == status.HTTP_200_OK
@@ -237,9 +231,7 @@ def test_update_stop_point(
 def test_update_stop_point_invalid_stop_area(
     client: TestClient, test_stop_point: StopPoint
 ):
-    update_data = {
-        "stop_area_code": 99999  
-    }
+    update_data = {"stop_area_code": 99999}
     response = client.put(f"/stop_points/{test_stop_point.atco_code}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "StopArea with code 99999 not found." in response.json()["detail"]

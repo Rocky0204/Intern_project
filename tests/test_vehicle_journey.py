@@ -60,14 +60,13 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
     session.query(EmulatorLog).delete()
     session.query(StopActivity).delete()
-    session.query(VehicleJourney).delete()  
+    session.query(VehicleJourney).delete()
     session.query(JourneyPatternDefinition).delete()
     session.query(JourneyPattern).delete()
     session.query(Block).delete()
@@ -82,21 +81,19 @@ def db_session(setup_db):
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
     session.query(Garage).delete()
-    session.commit() 
+    session.commit()
 
     try:
         yield session
     finally:
-       
         transaction.rollback()
-       
+
         session.close()
         connection.close()
 
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-
     def override_get_db():
         try:
             yield db_session
@@ -107,8 +104,6 @@ def client(db_session: Session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-
-
 
 
 @pytest.fixture(scope="function")
@@ -221,8 +216,6 @@ def test_vehicle_journey(
     return vj
 
 
-
-
 def test_create_vehicle_journey(
     client: TestClient,
     test_journey_pattern: JourneyPattern,
@@ -263,7 +256,7 @@ def test_create_vehicle_journey_invalid_jp_id(
     vj_data = {
         "departure_time": "10:00:00",
         "dayshift": 1,
-        "jp_id": 99999,  
+        "jp_id": 99999,
         "block_id": test_block.block_id,
         "operator_id": test_operator.operator_id,
         "line_id": test_line.line_id,
@@ -285,7 +278,7 @@ def test_create_vehicle_journey_invalid_block_id(
         "departure_time": "10:00:00",
         "dayshift": 1,
         "jp_id": test_journey_pattern.jp_id,
-        "block_id": 99999,  
+        "block_id": 99999,
         "operator_id": test_operator.operator_id,
         "line_id": test_line.line_id,
         "service_id": test_service.service_id,
@@ -345,7 +338,7 @@ def test_update_vehicle_journey(
 def test_update_vehicle_journey_invalid_jp_id(
     client: TestClient, test_vehicle_journey: VehicleJourney
 ):
-    update_data = {"jp_id": 99999}  
+    update_data = {"jp_id": 99999}
     response = client.put(
         f"/vehicle_journeys/{test_vehicle_journey.vj_id}", json=update_data
     )

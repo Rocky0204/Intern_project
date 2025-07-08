@@ -118,7 +118,7 @@ def test_duplicate_garage_name(client):
     response = client.post(
         "/garages/",
         json={
-            "name": "Main Garage",  
+            "name": "Main Garage",
             "capacity": 30,
             "latitude": 0,
             "longitude": 0,

@@ -107,7 +107,7 @@ def test_duplicate_bus_type_name(client):
     response = client.post(
         "/bus-types/",
         json={
-            "name": "Double Decker",  
+            "name": "Double Decker",
             "capacity": 30,
         },
     )

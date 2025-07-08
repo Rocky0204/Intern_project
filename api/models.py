@@ -1,14 +1,18 @@
 from datetime import time, datetime
 from enum import IntEnum
 import json
-from sqlalchemy import DateTime, ForeignKey, func, SmallInteger, String, JSON
+from sqlalchemy import DateTime, ForeignKey, SmallInteger, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from typing import Optional, List, Dict, Any
-from sqlalchemy import Column, Integer, String, DateTime, Time, ForeignKey, UniqueConstraint
+from typing import Optional, Dict, Any
+from sqlalchemy import (
+    Integer,
+)
 from sqlalchemy.ext.hybrid import hybrid_property
+
 
 class Base(DeclarativeBase):
     pass
+
 
 class StopArea(Base):
     __tablename__ = "stop_area"
@@ -191,8 +195,12 @@ class StopActivity(Base):
 class JourneyPatternDefinition(Base):
     __tablename__ = "journey_pattern_definition"
 
-    jp_id: Mapped[int] = mapped_column(ForeignKey("journey_pattern.jp_id"), primary_key=True)
-    stop_point_id: Mapped[int] = mapped_column(ForeignKey("stop_point.atco_code"), primary_key=True)
+    jp_id: Mapped[int] = mapped_column(
+        ForeignKey("journey_pattern.jp_id"), primary_key=True
+    )
+    stop_point_id: Mapped[int] = mapped_column(
+        ForeignKey("stop_point.atco_code"), primary_key=True
+    )
     sequence: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
     arrival_time: Mapped[time]
     departure_time: Mapped[time]
@@ -206,8 +214,12 @@ class JourneyPatternDefinition(Base):
 class RouteDefinition(Base):
     __tablename__ = "route_definition"
 
-    route_id: Mapped[int] = mapped_column(ForeignKey("route.route_id"), primary_key=True)
-    stop_point_id: Mapped[int] = mapped_column(ForeignKey("stop_point.atco_code"), primary_key=True)
+    route_id: Mapped[int] = mapped_column(
+        ForeignKey("route.route_id"), primary_key=True
+    )
+    stop_point_id: Mapped[int] = mapped_column(
+        ForeignKey("stop_point.atco_code"), primary_key=True
+    )
     sequence: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
 
     route: Mapped["Route"] = relationship(back_populates="route_definitions")
@@ -303,10 +315,12 @@ class EmulatorLog(Base):
     __tablename__ = "emulator_log"
 
     run_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    status: Mapped[int] = mapped_column(Integer)  
+    status: Mapped[int] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
-    optimization_details: Mapped[Optional[str]] = mapped_column(String, nullable=True) 
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+    optimization_details: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     @hybrid_property
     def optimization_details_dict(self) -> Optional[Dict[str, Any]]:

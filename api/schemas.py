@@ -239,7 +239,7 @@ class StopActivityBase(BaseModel):
     activity_type: str
     activity_time: time
     pax_count: int
-    stop_point_id: int  
+    stop_point_id: int
     vj_id: int
 
 
@@ -281,6 +281,7 @@ class JourneyPatternDefinitionUpdate(BaseModel):
     stop_point_atco_code: Optional[int] = None
     arrival_time: Optional[time] = None
     departure_time: Optional[time] = None
+
 
 # ───── RouteDefinition ─────
 class RouteDefinitionBase(BaseModel):
@@ -388,10 +389,10 @@ class EmulatorLogBase(BaseModel):
 
 
 class OptimizationDetailsRead(BaseModel):
-    status: Optional[str] = None  
-    message: Optional[str] = None 
+    status: Optional[str] = None
+    message: Optional[str] = None
     total_passengers_served: Optional[int] = None
-    schedule: Optional[List[Dict[str, Any]]] = None 
+    schedule: Optional[List[Dict[str, Any]]] = None
     solver_runtime_ms: Optional[float] = None
     solver_iterations: Optional[int] = None
     buses_assigned_summary: Optional[Dict[str, Any]] = None

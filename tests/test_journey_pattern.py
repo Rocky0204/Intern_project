@@ -1,12 +1,9 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-
-from api.models import *
-from api.database import *
+from api.models import JourneyPattern
 
 
 def test_create_journey_pattern(client_with_db: TestClient, db_session: Session):
-   
     test_data = {
         "jp_code": "JP001_CREATE",
         "line_id": 1,
@@ -35,7 +32,6 @@ def test_create_journey_pattern(client_with_db: TestClient, db_session: Session)
 
 
 def test_read_journey_patterns(client_with_db: TestClient, db_session: Session):
-   
     db_jp = JourneyPattern(
         **{
             "jp_code": "JP002_LIST",
@@ -47,8 +43,8 @@ def test_read_journey_patterns(client_with_db: TestClient, db_session: Session):
         }
     )
     db_session.add(db_jp)
-    db_session.commit()  
-    db_session.refresh(db_jp) 
+    db_session.commit()
+    db_session.refresh(db_jp)
 
     response = client_with_db.get("/journey_patterns/")
     assert response.status_code == 200
@@ -60,7 +56,6 @@ def test_read_journey_patterns(client_with_db: TestClient, db_session: Session):
 
 
 def test_read_single_journey_pattern(client_with_db: TestClient, db_session: Session):
-   
     db_jp = JourneyPattern(
         **{
             "jp_code": "JP003_SINGLE",
@@ -74,7 +69,7 @@ def test_read_single_journey_pattern(client_with_db: TestClient, db_session: Ses
     db_session.add(db_jp)
     db_session.commit()
     db_session.refresh(db_jp)
-    jp_id = db_jp.jp_id  
+    jp_id = db_jp.jp_id
 
     response = client_with_db.get(f"/journey_patterns/{jp_id}")
     assert response.status_code == 200
@@ -86,7 +81,6 @@ def test_read_single_journey_pattern(client_with_db: TestClient, db_session: Ses
 
 
 def test_update_journey_pattern(client_with_db: TestClient, db_session: Session):
-   
     db_jp = JourneyPattern(
         **{
             "jp_code": "JP004_UPDATE",
@@ -118,7 +112,6 @@ def test_update_journey_pattern(client_with_db: TestClient, db_session: Session)
 
 
 def test_delete_journey_pattern(client_with_db: TestClient, db_session: Session):
-    
     db_jp = JourneyPattern(
         **{
             "jp_code": "JP005_DELETE",
@@ -141,7 +134,7 @@ def test_delete_journey_pattern(client_with_db: TestClient, db_session: Session)
     deleted_db_jp = (
         db_session.query(JourneyPattern).filter(JourneyPattern.jp_id == jp_id).first()
     )
-    assert deleted_db_jp is None  
+    assert deleted_db_jp is None
 
     response = client_with_db.get(f"/journey_patterns/{jp_id}")
     assert response.status_code == 404

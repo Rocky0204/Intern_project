@@ -66,7 +66,7 @@ def client(db_session):
         try:
             yield db_session
         finally:
-            pass  
+            pass
 
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
@@ -140,7 +140,7 @@ def test_duplicate_registration(client):
         "/buses/",
         json={
             "bus_id": "BUS004",
-            "reg_num": "ABC123",  
+            "reg_num": "ABC123",
             "bus_type_id": 1,
             "garage_id": 1,
             "operator_id": 1,

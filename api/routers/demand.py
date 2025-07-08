@@ -64,7 +64,6 @@ def read_demand(
     end_time: time,
     db: Session = Depends(get_db),
 ):
-
     db_demand = (
         db.query(Demand)
         .filter(
@@ -93,7 +92,6 @@ def update_demand(
     demand: DemandUpdate,
     db: Session = Depends(get_db),
 ):
-    
     db_demand = (
         db.query(Demand)
         .filter(
@@ -136,7 +134,6 @@ def delete_demand(
     end_time: time,
     db: Session = Depends(get_db),
 ):
-
     db_demand = (
         db.query(Demand)
         .filter(
@@ -155,9 +152,7 @@ def delete_demand(
     try:
         db.delete(db_demand)
         db.commit()
-        return {
-            "message": "Demand entry deleted successfully"
-        }
+        return {"message": "Demand entry deleted successfully"}
     except IntegrityError:
         db.rollback()
         raise HTTPException(

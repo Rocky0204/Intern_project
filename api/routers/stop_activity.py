@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import time 
 
 from ..database import get_db
 from ..models import StopActivity, StopPoint, VehicleJourney
@@ -19,23 +18,35 @@ router = APIRouter(
 
 
 @router.post("/", response_model=StopActivityRead, status_code=status.HTTP_201_CREATED)
-def create_stop_activity(
-    activity: StopActivityCreate, db: Session = Depends(get_db)
-):
-    stop_point = db.query(StopPoint).filter(StopPoint.atco_code == activity.stop_point_id).first()
+def create_stop_activity(activity: StopActivityCreate, db: Session = Depends(get_db)):
+    stop_point = (
+        db.query(StopPoint)
+        .filter(StopPoint.atco_code == activity.stop_point_id)
+        .first()
+    )
     if not stop_point:
-        raise HTTPException(status_code=404, detail=f"Stop Point with ATCO Code {activity.stop_point_id} not found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stop Point with ATCO Code {activity.stop_point_id} not found",
+        )
 
     if activity.vj_id:
-        vehicle_journey = db.query(VehicleJourney).filter(VehicleJourney.vj_id == activity.vj_id).first()
+        vehicle_journey = (
+            db.query(VehicleJourney)
+            .filter(VehicleJourney.vj_id == activity.vj_id)
+            .first()
+        )
         if not vehicle_journey:
-            raise HTTPException(status_code=404, detail=f"Vehicle Journey with ID {activity.vj_id} not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Vehicle Journey with ID {activity.vj_id} not found",
+            )
 
     db_activity = StopActivity(
         activity_type=activity.activity_type,
         activity_time=activity.activity_time,
         pax_count=activity.pax_count,
-        stop_point_id=activity.stop_point_id, 
+        stop_point_id=activity.stop_point_id,
         vj_id=activity.vj_id,
     )
     db.add(db_activity)
@@ -54,7 +65,10 @@ def create_stop_activity(
 
 @router.get("/", response_model=List[StopActivityRead])
 def read_stop_activities(
-    stop_point_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    stop_point_id: int = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
 ):
     query = db.query(StopActivity)
     if stop_point_id:
@@ -63,14 +77,16 @@ def read_stop_activities(
 
     response_list = []
     for activity in activities:
-        response_list.append({
-            "activity_id": activity.activity_id,
-            "activity_type": activity.activity_type,
-            "activity_time": activity.activity_time.isoformat(), 
-            "pax_count": activity.pax_count,
-            "stop_point_id": activity.stop_point_id,
-            "vj_id": activity.vj_id,
-        })
+        response_list.append(
+            {
+                "activity_id": activity.activity_id,
+                "activity_type": activity.activity_type,
+                "activity_time": activity.activity_time.isoformat(),
+                "pax_count": activity.pax_count,
+                "stop_point_id": activity.stop_point_id,
+                "vj_id": activity.vj_id,
+            }
+        )
     return response_list
 
 
@@ -81,11 +97,11 @@ def read_single_stop_activity(activity_id: int, db: Session = Depends(get_db)):
     )
     if db_activity is None:
         raise HTTPException(status_code=404, detail="Stop activity not found")
-    
+
     return {
         "activity_id": db_activity.activity_id,
         "activity_type": db_activity.activity_type,
-        "activity_time": db_activity.activity_time.isoformat(), 
+        "activity_time": db_activity.activity_time.isoformat(),
         "pax_count": db_activity.pax_count,
         "stop_point_id": db_activity.stop_point_id,
         "vj_id": db_activity.vj_id,
@@ -105,27 +121,40 @@ def update_stop_activity(
 
     if activity_update.activity_type is not None:
         db_activity.activity_type = activity_update.activity_type
-    
+
     if activity_update.activity_time is not None:
         db_activity.activity_time = activity_update.activity_time
-    
+
     if activity_update.pax_count is not None:
         db_activity.pax_count = activity_update.pax_count
-    
-    if activity_update.stop_point_id is not None:
-        stop_point = db.query(StopPoint).filter(StopPoint.atco_code == activity_update.stop_point_id).first()
-        if not stop_point:
-            raise HTTPException(status_code=404, detail=f"Stop Point with ATCO Code {activity_update.stop_point_id} not found")
-        db_activity.stop_point_id = activity_update.stop_point_id 
-    
-    if activity_update.vj_id is not None:
-        if activity_update.vj_id is not None: 
-            if activity_update.vj_id is not None: 
-                vehicle_journey = db.query(VehicleJourney).filter(VehicleJourney.vj_id == activity_update.vj_id).first()
-                if not vehicle_journey:
-                    raise HTTPException(status_code=404, detail=f"Vehicle Journey with ID {activity_update.vj_id} not found")
-        db_activity.vj_id = activity_update.vj_id
 
+    if activity_update.stop_point_id is not None:
+        stop_point = (
+            db.query(StopPoint)
+            .filter(StopPoint.atco_code == activity_update.stop_point_id)
+            .first()
+        )
+        if not stop_point:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Stop Point with ATCO Code {activity_update.stop_point_id} not found",
+            )
+        db_activity.stop_point_id = activity_update.stop_point_id
+
+    if activity_update.vj_id is not None:
+        if activity_update.vj_id is not None:
+            if activity_update.vj_id is not None:
+                vehicle_journey = (
+                    db.query(VehicleJourney)
+                    .filter(VehicleJourney.vj_id == activity_update.vj_id)
+                    .first()
+                )
+                if not vehicle_journey:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Vehicle Journey with ID {activity_update.vj_id} not found",
+                    )
+        db_activity.vj_id = activity_update.vj_id
 
     db.commit()
     db.refresh(db_activity)

@@ -3,8 +3,6 @@ from sqlalchemy.orm import Session
 from datetime import time
 
 from api.models import StopPoint, VehicleJourney, StopActivity
-import pytest
-
 
 
 def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
@@ -15,7 +13,11 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
         "longitude": 0.8,
         "stop_area_code": 1,
     }
-    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    db_stop_point = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data["atco_code"])
+        .first()
+    )
     if not db_stop_point:
         db_stop_point = StopPoint(**stop_point_data)
         db_session.add(db_stop_point)
@@ -32,7 +34,11 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj = db_session.query(VehicleJourney).filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"]).first()
+    db_vj = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"])
+        .first()
+    )
     if not db_vj:
         db_vj = VehicleJourney(**vj_data)
         db_session.add(db_vj)
@@ -42,9 +48,9 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
 
     test_data = {
         "activity_type": "arrival",
-        "activity_time": "08:30:00", 
+        "activity_time": "08:30:00",
         "pax_count": 15,
-        "stop_point_id": stop_point_id, 
+        "stop_point_id": stop_point_id,
         "vj_id": vj_id,
     }
 
@@ -59,17 +65,20 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
     assert response_data["stop_point_id"] == stop_point_id
     assert response_data["vj_id"] == vj_id
 
-    db_activity = db_session.query(StopActivity).filter_by(activity_id=response_data["activity_id"]).first()
+    db_activity = (
+        db_session.query(StopActivity)
+        .filter_by(activity_id=response_data["activity_id"])
+        .first()
+    )
     assert db_activity is not None
     assert db_activity.activity_type == "arrival"
-    assert db_activity.activity_time == time(8, 30, 0) 
+    assert db_activity.activity_time == time(8, 30, 0)
     assert db_activity.pax_count == 15
     assert db_activity.stop_point_id == stop_point_id
     assert db_activity.vj_id == vj_id
 
 
 def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
-   
     stop_point_data_1 = {
         "atco_code": 100009,
         "name": "Test Stop Point SA Read 1",
@@ -77,7 +86,11 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
         "longitude": 0.9,
         "stop_area_code": 1,
     }
-    db_stop_point_1 = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_1["atco_code"]).first()
+    db_stop_point_1 = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data_1["atco_code"])
+        .first()
+    )
     if not db_stop_point_1:
         db_stop_point_1 = StopPoint(**stop_point_data_1)
         db_session.add(db_stop_point_1)
@@ -92,7 +105,11 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
         "longitude": 1.0,
         "stop_area_code": 1,
     }
-    db_stop_point_2 = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_2["atco_code"]).first()
+    db_stop_point_2 = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data_2["atco_code"])
+        .first()
+    )
     if not db_stop_point_2:
         db_stop_point_2 = StopPoint(**stop_point_data_2)
         db_session.add(db_stop_point_2)
@@ -109,7 +126,11 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj = db_session.query(VehicleJourney).filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"]).first()
+    db_vj = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"])
+        .first()
+    )
     if not db_vj:
         db_vj = VehicleJourney(**vj_data)
         db_session.add(db_vj)
@@ -143,7 +164,7 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
         assert "activity_id" in item
         assert "activity_type" in item
         assert "activity_time" in item
-        time.fromisoformat(item["activity_time"]) 
+        time.fromisoformat(item["activity_time"])
         assert "pax_count" in item
         assert "stop_point_id" in item
         assert "vj_id" in item
@@ -157,7 +178,6 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
 
 
 def test_read_single_stop_activity(client_with_db: TestClient, db_session: Session):
-    
     stop_point_data = {
         "atco_code": 100011,
         "name": "Test Stop Point SA Single",
@@ -165,7 +185,11 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
         "longitude": 1.1,
         "stop_area_code": 1,
     }
-    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    db_stop_point = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data["atco_code"])
+        .first()
+    )
     if not db_stop_point:
         db_stop_point = StopPoint(**stop_point_data)
         db_session.add(db_stop_point)
@@ -182,7 +206,11 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj = db_session.query(VehicleJourney).filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"]).first()
+    db_vj = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"])
+        .first()
+    )
     if not db_vj:
         db_vj = VehicleJourney(**vj_data)
         db_session.add(db_vj)
@@ -217,7 +245,6 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
 
 
 def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
-   
     stop_point_data_orig = {
         "atco_code": 100012,
         "name": "Test Stop Point SA Update Orig",
@@ -225,7 +252,11 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "longitude": 1.2,
         "stop_area_code": 1,
     }
-    db_stop_point_orig = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_orig["atco_code"]).first()
+    db_stop_point_orig = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data_orig["atco_code"])
+        .first()
+    )
     if not db_stop_point_orig:
         db_stop_point_orig = StopPoint(**stop_point_data_orig)
         db_session.add(db_stop_point_orig)
@@ -240,7 +271,11 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "longitude": 1.3,
         "stop_area_code": 1,
     }
-    db_stop_point_new = db_session.query(StopPoint).filter_by(atco_code=stop_point_data_new["atco_code"]).first()
+    db_stop_point_new = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data_new["atco_code"])
+        .first()
+    )
     if not db_stop_point_new:
         db_stop_point_new = StopPoint(**stop_point_data_new)
         db_session.add(db_stop_point_new)
@@ -257,7 +292,11 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj_orig = db_session.query(VehicleJourney).filter_by(jp_id=vj_data_orig["jp_id"], block_id=vj_data_orig["block_id"]).first()
+    db_vj_orig = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data_orig["jp_id"], block_id=vj_data_orig["block_id"])
+        .first()
+    )
     if not db_vj_orig:
         db_vj_orig = VehicleJourney(**vj_data_orig)
         db_session.add(db_vj_orig)
@@ -274,14 +313,17 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj_new = db_session.query(VehicleJourney).filter_by(jp_id=vj_data_new["jp_id"], block_id=vj_data_new["block_id"]).first()
+    db_vj_new = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data_new["jp_id"], block_id=vj_data_new["block_id"])
+        .first()
+    )
     if not db_vj_new:
         db_vj_new = VehicleJourney(**vj_data_new)
         db_session.add(db_vj_new)
         db_session.commit()
         db_session.refresh(db_vj_new)
     vj_id_new = db_vj_new.vj_id
-
 
     activity_data = {
         "activity_type": "alighting",
@@ -299,8 +341,8 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "activity_type": "boarding",
         "activity_time": "11:15:00",
         "pax_count": 12,
-        "stop_point_id": stop_point_id_new, 
-        "vj_id": vj_id_new, 
+        "stop_point_id": stop_point_id_new,
+        "vj_id": vj_id_new,
     }
 
     response = client_with_db.put(
@@ -315,7 +357,11 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
     assert data["stop_point_id"] == stop_point_id_new
     assert data["vj_id"] == vj_id_new
 
-    updated_db_activity = db_session.query(StopActivity).filter_by(activity_id=db_activity.activity_id).first()
+    updated_db_activity = (
+        db_session.query(StopActivity)
+        .filter_by(activity_id=db_activity.activity_id)
+        .first()
+    )
     assert updated_db_activity.activity_type == "boarding"
     assert updated_db_activity.activity_time == time(11, 15, 0)
     assert updated_db_activity.pax_count == 12
@@ -324,7 +370,6 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
 
 
 def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
-    
     stop_point_data = {
         "atco_code": 100014,
         "name": "Test Stop Point SA Delete",
@@ -332,7 +377,11 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
         "longitude": 1.4,
         "stop_area_code": 1,
     }
-    db_stop_point = db_session.query(StopPoint).filter_by(atco_code=stop_point_data["atco_code"]).first()
+    db_stop_point = (
+        db_session.query(StopPoint)
+        .filter_by(atco_code=stop_point_data["atco_code"])
+        .first()
+    )
     if not db_stop_point:
         db_stop_point = StopPoint(**stop_point_data)
         db_session.add(db_stop_point)
@@ -349,7 +398,11 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
         "line_id": 1,
         "service_id": 1,
     }
-    db_vj = db_session.query(VehicleJourney).filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"]).first()
+    db_vj = (
+        db_session.query(VehicleJourney)
+        .filter_by(jp_id=vj_data["jp_id"], block_id=vj_data["block_id"])
+        .first()
+    )
     if not db_vj:
         db_vj = VehicleJourney(**vj_data)
         db_session.add(db_vj)
@@ -370,9 +423,13 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
     db_session.refresh(db_activity)
 
     response = client_with_db.delete(f"/stop_activities/{db_activity.activity_id}")
-    assert response.status_code == 204 
+    assert response.status_code == 204
 
-    deleted_db_activity = db_session.query(StopActivity).filter_by(activity_id=db_activity.activity_id).first()
+    deleted_db_activity = (
+        db_session.query(StopActivity)
+        .filter_by(activity_id=db_activity.activity_id)
+        .first()
+    )
     assert deleted_db_activity is None
 
     response = client_with_db.delete("/stop_activities/99999")

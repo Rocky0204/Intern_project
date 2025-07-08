@@ -129,7 +129,7 @@ def test_create_route_invalid_operator(client):
         "/routes/",
         json={
             "name": "Invalid Route",
-            "operator_id": 999,  
+            "operator_id": 999,
             "description": "Should fail",
         },
     )

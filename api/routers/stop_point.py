@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 
 from ..database import get_db
-from ..models import StopPoint, StopArea  
+from ..models import StopPoint, StopArea
 from ..schemas import StopPointCreate, StopPointRead, StopPointUpdate
 
 router = APIRouter(prefix="/stop_points", tags=["stop_points"])
@@ -12,7 +12,6 @@ router = APIRouter(prefix="/stop_points", tags=["stop_points"])
 
 @router.post("/", response_model=StopPointRead, status_code=status.HTTP_201_CREATED)
 def create_stop_point(stop_point: StopPointCreate, db: Session = Depends(get_db)):
-    
     stop_area = (
         db.query(StopArea)
         .filter(StopArea.stop_area_code == stop_point.stop_area_code)
@@ -98,20 +97,16 @@ def update_stop_point(
 
 @router.delete("/{atco_code}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_stop_point(atco_code: int, db: Session = Depends(get_db)):
-  
     db_stop_point = db.query(StopPoint).filter(StopPoint.atco_code == atco_code).first()
     if db_stop_point is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Stop point not found"
         )
 
-
     try:
         db.delete(db_stop_point)
         db.commit()
-        return {
-            "message": "Stop point deleted successfully"
-        } 
+        return {"message": "Stop point deleted successfully"}
     except IntegrityError:
         db.rollback()
         raise HTTPException(

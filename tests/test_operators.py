@@ -108,7 +108,7 @@ def test_duplicate_operator_code(client):
     response = client.post(
         "/operators/",
         json={
-            "operator_code": "OP1",  
+            "operator_code": "OP1",
             "name": "Duplicate Operator",
         },
     )
@@ -131,7 +131,7 @@ def test_delete_operator_with_dependencies(client, db_session):
         reg_num="TEST001",
         bus_type_id=2,
         garage_id=2,
-        operator_id=1,  
+        operator_id=1,
     )
     db_session.add(test_bus)
     db_session.commit()
