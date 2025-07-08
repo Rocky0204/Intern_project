@@ -1955,32 +1955,32 @@ class BusEmulator:
             "simulation_start_time_minutes": self.start_time_minutes,
             "simulation_end_time_minutes": self.current_time, # Actual end time
             "use_optimized_schedule": self.use_optimized_schedule,
-            # "optimized_schedules": self.bus_schedules_planned if self.use_optimized_schedule else {},
-            # "bus_full_schedules": {
-            #     bus_id: bus.schedule for bus_id, bus in self.buses.items()
-            # },
-            # "completed_passengers_summary": [
-            #     {
-            #         "id": p.id,
-            #         "origin": p.origin_stop_id,
-            #         "destination": p.destination_stop_id,
-            #         "arrival_time_at_stop": p.arrival_time_at_stop,
-            #         "board_time": p.board_time,
-            #         "alight_time": p.alight_time,
-            #         "wait_time": p.wait_time,
-            #         "travel_time": p.travel_time,
-            #         "total_trip_time": p.total_trip_time,
-            #     }
-            #     for p in self.completed_passengers
-            # ],
-            # "cumulative_stop_data": dict(self.cumulative_stop_data),
-            # "total_passengers_completed_trip": self.total_passengers_completed_trip,
-            # "total_passengers_waiting_at_end": sum(
-            #     stop.get_waiting_passengers_count() for stop in self.stops.values()
-            # ),
-            # "remaining_pending_passengers_at_end": len(self.pending_passengers),
-            # "total_miles_traveled": sum(bus.miles_traveled for bus in self.buses.values()),
-            # "total_fuel_consumed": sum(bus.fuel_consumed for bus in self.buses.values()),
+            "optimized_schedules": self.bus_schedules_planned if self.use_optimized_schedule else {},
+            "bus_full_schedules": {
+                bus_id: bus.schedule for bus_id, bus in self.buses.items()
+            },
+            "completed_passengers_summary": [
+                {
+                    "id": p.id,
+                    "origin": p.origin_stop_id,
+                    "destination": p.destination_stop_id,
+                    "arrival_time_at_stop": p.arrival_time_at_stop,
+                    "board_time": p.board_time,
+                    "alight_time": p.alight_time,
+                    "wait_time": p.wait_time,
+                    "travel_time": p.travel_time,
+                    "total_trip_time": p.total_trip_time,
+                }
+                for p in self.completed_passengers
+            ],
+            "cumulative_stop_data": dict(self.cumulative_stop_data),
+            "total_passengers_completed_trip": self.total_passengers_completed_trip,
+            "total_passengers_waiting_at_end": sum(
+                stop.get_waiting_passengers_count() for stop in self.stops.values()
+            ),
+            "remaining_pending_passengers_at_end": len(self.pending_passengers),
+            "total_miles_traveled": sum(bus.miles_traveled for bus in self.buses.values()),
+            "total_fuel_consumed": sum(bus.fuel_consumed for bus in self.buses.values()),
         }
         self._last_simulation_results = detailed_results
         return detailed_results
