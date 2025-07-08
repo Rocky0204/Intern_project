@@ -1,12 +1,9 @@
-# tests/test_vehicle_journey.py
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import time
-
-# Add these lines to fix module import paths
 import os
 import sys
 
@@ -16,7 +13,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../"
 from api.main import app
 from api.database import get_db
 
-# Import all models that might be created or need cleanup in tests
 from api.models import (
     Base,
     EmulatorLog,
@@ -38,7 +34,6 @@ from api.models import (
     Garage,
 )
 
-# --- Database Setup for Tests (self-contained, as requested) ---
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -46,7 +41,6 @@ engine = create_engine(
 )
 
 
-# Ensure foreign key enforcement for SQLite using an event listener
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -59,7 +53,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="module")
 def setup_db():
-    """Creates all tables before tests in this module run, and drops them afterwards."""
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -67,19 +60,14 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    """
-    Provides a transactional database session for each test function.
-    Ensures a clean state for every test by rolling back changes.
-    """
+    
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Comprehensive cleanup for all tables that might have data from fixtures or previous tests
-    # Order matters for foreign key constraints (delete children before parents)
     session.query(EmulatorLog).delete()
     session.query(StopActivity).delete()
-    session.query(VehicleJourney).delete()  # VehicleJourney cleanup
+    session.query(VehicleJourney).delete()  
     session.query(JourneyPatternDefinition).delete()
     session.query(JourneyPattern).delete()
     session.query(Block).delete()
@@ -94,21 +82,20 @@ def db_session(setup_db):
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
     session.query(Garage).delete()
-    session.commit()  # Commit the deletions to ensure a clean state before the test starts
+    session.commit() 
 
     try:
         yield session
     finally:
-        # Rollback the transaction to clean up any changes made during the test
+       
         transaction.rollback()
-        # Close the session and connection
+       
         session.close()
         connection.close()
 
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-    """Overrides the get_db dependency to use the test database session."""
 
     def override_get_db():
         try:
@@ -122,7 +109,6 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-# --- Reusable Test Data Fixtures for VehicleJourney dependencies ---
 
 
 @pytest.fixture(scope="function")
@@ -235,7 +221,6 @@ def test_vehicle_journey(
     return vj
 
 
-# --- Test Functions for VehicleJourney ---
 
 
 def test_create_vehicle_journey(
@@ -278,7 +263,7 @@ def test_create_vehicle_journey_invalid_jp_id(
     vj_data = {
         "departure_time": "10:00:00",
         "dayshift": 1,
-        "jp_id": 99999,  # Non-existent JP ID
+        "jp_id": 99999,  
         "block_id": test_block.block_id,
         "operator_id": test_operator.operator_id,
         "line_id": test_line.line_id,
@@ -300,7 +285,7 @@ def test_create_vehicle_journey_invalid_block_id(
         "departure_time": "10:00:00",
         "dayshift": 1,
         "jp_id": test_journey_pattern.jp_id,
-        "block_id": 99999,  # Non-existent Block ID
+        "block_id": 99999,  
         "operator_id": test_operator.operator_id,
         "line_id": test_line.line_id,
         "service_id": test_service.service_id,
@@ -360,7 +345,7 @@ def test_update_vehicle_journey(
 def test_update_vehicle_journey_invalid_jp_id(
     client: TestClient, test_vehicle_journey: VehicleJourney
 ):
-    update_data = {"jp_id": 99999}  # Non-existent JP ID
+    update_data = {"jp_id": 99999}  
     response = client.put(
         f"/vehicle_journeys/{test_vehicle_journey.vj_id}", json=update_data
     )
@@ -374,8 +359,6 @@ def test_delete_vehicle_journey(
     vj_id_to_delete = test_vehicle_journey.vj_id
     response = client.delete(f"/vehicle_journeys/{vj_id_to_delete}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Verify in DB
     db_vj = (
         db_session.query(VehicleJourney)
         .filter(VehicleJourney.vj_id == vj_id_to_delete)

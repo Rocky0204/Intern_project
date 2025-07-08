@@ -5,14 +5,9 @@ from datetime import time
 from api.models import Route, StopPoint, RouteDefinition
 import pytest
 
-# Assuming client_with_db and db_session are provided by conftest.py
-
 
 def test_create_route_definition(client_with_db: TestClient, db_session: Session):
-    """
-    Tests the creation of a new route definition via the API.
-    """
-    # Create required parent objects in the database
+   
     route_data = {"name": "Test Route for RD", "operator_id": 1}
     db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
     if not db_route:
@@ -40,19 +35,18 @@ def test_create_route_definition(client_with_db: TestClient, db_session: Session
 
     test_data = {
         "route_id": route_id,
-        "stop_point_id": stop_point_id, # Use stop_point_id
+        "stop_point_id": stop_point_id, 
         "sequence": 1,
     }
 
     response = client_with_db.post("/route_definitions/", json=test_data)
-    assert response.status_code == 201 # Expect 201 Created
+    assert response.status_code == 201 
 
     response_data = response.json()
     assert response_data["route_id"] == route_id
     assert response_data["stop_point_id"] == stop_point_id
     assert response_data["sequence"] == 1
 
-    # Verify directly from the database
     db_definition = (
         db_session.query(RouteDefinition)
         .filter_by(
@@ -67,16 +61,12 @@ def test_create_route_definition(client_with_db: TestClient, db_session: Session
     assert db_definition.stop_point_id == stop_point_id
     assert db_definition.sequence == 1
 
-    # Test for conflict (same primary keys)
     response = client_with_db.post("/route_definitions/", json=test_data)
     assert response.status_code == 409
 
 
 def test_read_route_definitions(client_with_db: TestClient, db_session: Session):
-    """
-    Tests retrieving all route definitions and filtering by route_id.
-    """
-    # Create required parent objects in the database
+    
     route_data_1 = {"name": "Test Route All 1", "operator_id": 1}
     db_route_1 = db_session.query(Route).filter_by(name=route_data_1["name"]).first()
     if not db_route_1:
@@ -125,20 +115,16 @@ def test_read_route_definitions(client_with_db: TestClient, db_session: Session)
         db_session.refresh(db_stop_point_2)
     stop_point_id_2 = db_stop_point_2.atco_code
 
-    # Create test definitions directly in the database
     def_1 = RouteDefinition(route_id=route_id_1, stop_point_id=stop_point_id_1, sequence=1)
     def_2 = RouteDefinition(route_id=route_id_1, stop_point_id=stop_point_id_2, sequence=2)
     def_3 = RouteDefinition(route_id=route_id_2, stop_point_id=stop_point_id_1, sequence=1)
     db_session.add_all([def_1, def_2, def_3])
     db_session.commit()
 
-    # Test retrieving all definitions
     response = client_with_db.get("/route_definitions/")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 3 # At least the ones we added
-
-    # Validate structure and types of returned data
+    assert len(data) >= 3 
     for item in data:
         assert "route_id" in item
         assert "stop_point_id" in item
@@ -147,7 +133,6 @@ def test_read_route_definitions(client_with_db: TestClient, db_session: Session)
         assert isinstance(item["stop_point_id"], int)
         assert isinstance(item["sequence"], int)
 
-    # Test filtering by route_id
     response = client_with_db.get(f"/route_definitions/?route_id={route_id_1}")
     assert response.status_code == 200
     data = response.json()
@@ -156,10 +141,7 @@ def test_read_route_definitions(client_with_db: TestClient, db_session: Session)
 
 
 def test_read_single_route_definition(client_with_db: TestClient, db_session: Session):
-    """
-    Tests retrieving a single route definition by its composite primary key.
-    """
-    # Create required parent objects in the database
+    
     route_data = {"name": "Test Route Single", "operator_id": 1}
     db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
     if not db_route:
@@ -184,7 +166,6 @@ def test_read_single_route_definition(client_with_db: TestClient, db_session: Se
         db_session.refresh(db_stop_point)
     stop_point_id = db_stop_point.atco_code
 
-    # Create a test definition directly in the database
     def_data = {
         "route_id": route_id,
         "stop_point_id": stop_point_id,
@@ -204,7 +185,6 @@ def test_read_single_route_definition(client_with_db: TestClient, db_session: Se
     assert data["stop_point_id"] == stop_point_id
     assert data["sequence"] == db_def.sequence
 
-    # Test for non-existent definition
     response = client_with_db.get(
         f"/route_definitions/{route_id}/{stop_point_id}/999"
     )
@@ -212,10 +192,7 @@ def test_read_single_route_definition(client_with_db: TestClient, db_session: Se
 
 
 def test_update_route_definition(client_with_db: TestClient, db_session: Session):
-    """
-    Tests updating an existing route definition.
-    """
-    # Create required parent objects in the database
+  
     route_data = {"name": "Test Route Update", "operator_id": 1}
     db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
     if not db_route:
@@ -255,7 +232,6 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
         db_session.refresh(db_stop_point_new)
     stop_point_id_new = db_stop_point_new.atco_code
 
-    # Create the definition to be updated
     def_data = {
         "route_id": route_id,
         "stop_point_id": stop_point_id_orig,
@@ -266,7 +242,6 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
     db_session.commit()
     db_session.refresh(db_def)
 
-    # Update only stop_point_id
     update_data = {"stop_point_id": stop_point_id_new}
     response = client_with_db.put(
         f"/route_definitions/{route_id}/{stop_point_id_orig}/{db_def.sequence}",
@@ -278,12 +253,11 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
     assert data["stop_point_id"] == stop_point_id_new
     assert data["sequence"] == db_def.sequence
 
-    # Verify update directly from the database
     updated_db_def = (
         db_session.query(RouteDefinition)
         .filter_by(
             route_id=route_id,
-            stop_point_id=stop_point_id_new, # Use the new stop_point_id for retrieval
+            stop_point_id=stop_point_id_new, 
             sequence=db_def.sequence
         )
         .first()
@@ -291,10 +265,9 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
     assert updated_db_def.stop_point_id == stop_point_id_new
 
 
-    # Test updating sequence
     update_data_seq = {"sequence": 2}
     response_seq = client_with_db.put(
-        f"/route_definitions/{route_id}/{stop_point_id_new}/{db_def.sequence}", # Use updated primary keys for path
+        f"/route_definitions/{route_id}/{stop_point_id_new}/{db_def.sequence}", 
         json=update_data_seq,
     )
     assert response_seq.status_code == 200
@@ -302,7 +275,6 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
     assert data_seq["sequence"] == 2
 
 
-    # Test for non-existent definition update
     response = client_with_db.put(
         f"/route_definitions/{route_id}/{stop_point_id_new}/999",
         json={"sequence": 3},
@@ -311,10 +283,7 @@ def test_update_route_definition(client_with_db: TestClient, db_session: Session
 
 
 def test_delete_route_definition(client_with_db: TestClient, db_session: Session):
-    """
-    Tests deleting a route definition.
-    """
-    # Create required parent objects in the database
+
     route_data = {"name": "Test Route Delete", "operator_id": 1}
     db_route = db_session.query(Route).filter_by(name=route_data["name"]).first()
     if not db_route:
@@ -339,7 +308,6 @@ def test_delete_route_definition(client_with_db: TestClient, db_session: Session
         db_session.refresh(db_stop_point)
     stop_point_id = db_stop_point.atco_code
 
-    # Create the definition to be deleted
     def_data = {
         "route_id": route_id,
         "stop_point_id": stop_point_id,
@@ -353,9 +321,8 @@ def test_delete_route_definition(client_with_db: TestClient, db_session: Session
     response = client_with_db.delete(
         f"/route_definitions/{route_id}/{stop_point_id}/{db_def.sequence}"
     )
-    assert response.status_code == 204 # Expect 204 No Content for successful deletion
+    assert response.status_code == 204 
 
-    # Verify deletion by attempting to retrieve from the database
     deleted_db_def = (
         db_session.query(RouteDefinition)
         .filter_by(
@@ -367,7 +334,6 @@ def test_delete_route_definition(client_with_db: TestClient, db_session: Session
     )
     assert deleted_db_def is None
 
-    # Test deleting a non-existent definition
     response = client_with_db.delete(
         f"/route_definitions/{route_id}/{stop_point_id}/999"
     )

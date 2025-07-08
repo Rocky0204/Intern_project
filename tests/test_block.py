@@ -1,11 +1,9 @@
-# tests/test_block.py
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
-# Add these lines to fix module import paths
 import os
 import sys
 
@@ -15,7 +13,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../"
 from api.main import app
 from api.database import get_db
 
-# Import all models that might be created or need cleanup in tests
 from api.models import (
     Base,
     EmulatorLog,
@@ -37,7 +34,6 @@ from api.models import (
     Garage,
 )
 
-# --- Database Setup for Tests (self-contained, as requested) ---
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -45,7 +41,6 @@ engine = create_engine(
 )
 
 
-# Ensure foreign key enforcement for SQLite using an event listener
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -66,20 +61,14 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    """
-    Provides a transactional database session for each test function.
-    Ensures a clean state for every test by rolling back changes.
-    Cleans up all relevant tables before each test.
-    """
+
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Comprehensive cleanup for all tables that might have data from fixtures or previous tests
-    # Order matters for foreign key constraints (delete children before parents)
     session.query(EmulatorLog).delete()
-    session.query(VehicleJourney).delete()  # Blocks depend on VehicleJourneys
-    session.query(Block).delete()  # Block cleanup
+    session.query(VehicleJourney).delete()  
+    session.query(Block).delete() 
     session.query(Demand).delete()
     session.query(StopActivity).delete()
     session.query(JourneyPatternDefinition).delete()
@@ -94,12 +83,10 @@ def db_session(setup_db):
     session.query(Garage).delete()
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
-    session.commit()  # Commit the deletions to ensure a clean state before the test starts
-
+    session.commit() 
     try:
         yield session
     finally:
-        # Ensure rollback happens before closing the session
         transaction.rollback()
         session.close()
         connection.close()
@@ -107,7 +94,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-    """Overrides the get_db dependency to use the test database session."""
 
     def override_get_db():
         try:
@@ -121,7 +107,6 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-# --- Reusable Test Data Fixtures ---
 
 
 @pytest.fixture(scope="function")
@@ -155,9 +140,6 @@ def test_block(db_session: Session, test_operator: Operator, test_bus_type: BusT
     return block
 
 
-# --- Test Functions for Block ---
-
-
 def test_create_block(
     client: TestClient, test_operator: Operator, test_bus_type: BusType
 ):
@@ -178,7 +160,7 @@ def test_create_block(
 def test_create_block_invalid_operator(client: TestClient, test_bus_type: BusType):
     block_data = {
         "name": "Invalid Operator Block",
-        "operator_id": 99999,  # Non-existent operator
+        "operator_id": 99999,  
         "bus_type_id": test_bus_type.type_id,
     }
     response = client.post("/blocks/", json=block_data)
@@ -190,7 +172,7 @@ def test_create_block_invalid_bus_type(client: TestClient, test_operator: Operat
     block_data = {
         "name": "Invalid Bus Type Block",
         "operator_id": test_operator.operator_id,
-        "bus_type_id": 99999,  # Non-existent bus type
+        "bus_type_id": 99999,  
     }
     response = client.post("/blocks/", json=block_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -222,8 +204,8 @@ def test_update_block(
 ):
     update_data = {
         "name": "Updated Block Name",
-        "operator_id": test_operator.operator_id,  # Re-use existing or create new
-        "bus_type_id": test_bus_type.type_id,  # Re-use existing or create new
+        "operator_id": test_operator.operator_id, 
+        "bus_type_id": test_bus_type.type_id,  
     }
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_200_OK
@@ -234,14 +216,14 @@ def test_update_block(
 
 
 def test_update_block_invalid_operator(client: TestClient, test_block: Block):
-    update_data = {"operator_id": 99999}  # Non-existent operator
+    update_data = {"operator_id": 99999}  
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Operator with ID 99999 not found" in response.json()["detail"]
 
 
 def test_update_block_invalid_bus_type(client: TestClient, test_block: Block):
-    update_data = {"bus_type_id": 99999}  # Non-existent bus type
+    update_data = {"bus_type_id": 99999} 
     response = client.put(f"/blocks/{test_block.block_id}", json=update_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "BusType with ID 99999 not found" in response.json()["detail"]

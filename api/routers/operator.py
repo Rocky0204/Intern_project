@@ -11,7 +11,6 @@ router = APIRouter(prefix="/operators", tags=["operators"])
 
 @router.post("/", response_model=OperatorRead)
 def create_operator(operator: OperatorCreate, db: Session = Depends(get_db)):
-    # Check if operator with same code already exists
     existing_operator = (
         db.query(Operator)
         .filter(Operator.operator_code == operator.operator_code)
@@ -53,7 +52,6 @@ def update_operator(
 
     update_data = operator.model_dump(exclude_unset=True)
 
-    # Check if updating to an existing operator_code
     if "operator_code" in update_data:
         existing = (
             db.query(Operator)
@@ -82,30 +80,23 @@ def delete_operator(operator_id: int, db: Session = Depends(get_db)):
     if db_operator is None:
         raise HTTPException(status_code=404, detail="Operator not found")
 
-    # Check for any dependent records
     has_dependencies = False
 
-    # Check buses
     if db.query(Bus).filter(Bus.operator_id == operator_id).first():
         has_dependencies = True
 
-    # Check routes
     if db.query(Route).filter(Route.operator_id == operator_id).first():
         has_dependencies = True
 
-    # Check services
     if db.query(Service).filter(Service.operator_id == operator_id).first():
         has_dependencies = True
 
-    # Check lines
     if db.query(Line).filter(Line.operator_id == operator_id).first():
         has_dependencies = True
 
-    # Check blocks
     if db.query(Block).filter(Block.operator_id == operator_id).first():
         has_dependencies = True
 
-    # Check vehicle_journeys
     if (
         db.query(VehicleJourney)
         .filter(VehicleJourney.operator_id == operator_id)

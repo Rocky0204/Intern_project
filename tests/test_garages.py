@@ -7,7 +7,6 @@ from api.main import app
 from api.models import Base, Garage, Bus
 from api.database import get_db
 
-# Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -28,12 +27,10 @@ def db_session(setup_db):
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Clear existing data
     session.query(Bus).delete()
     session.query(Garage).delete()
     session.commit()
 
-    # Add test garage
     test_garage = Garage(
         garage_id=1, name="Main Garage", capacity=50, latitude=51.5, longitude=-0.1
     )
@@ -103,19 +100,16 @@ def test_update_garage(client):
 
 
 def test_delete_garage(client, db_session):
-    # First create a garage with no dependencies
     new_garage = Garage(
         garage_id=2, name="Temp Garage", capacity=10, latitude=0, longitude=0
     )
     db_session.add(new_garage)
     db_session.commit()
 
-    # Now delete it
     response = client.delete("/garages/2")
     assert response.status_code == 200
     assert response.json()["message"] == "Garage deleted successfully"
 
-    # Verify it's gone
     response = client.get("/garages/2")
     assert response.status_code == 404
 
@@ -124,7 +118,7 @@ def test_duplicate_garage_name(client):
     response = client.post(
         "/garages/",
         json={
-            "name": "Main Garage",  # Duplicate of existing garage
+            "name": "Main Garage",  
             "capacity": 30,
             "latitude": 0,
             "longitude": 0,
@@ -135,27 +129,22 @@ def test_duplicate_garage_name(client):
 
 
 def test_delete_garage_with_buses(client, db_session):
-    # First create a bus that depends on the garage
     from api.models import BusType, Operator
 
-    # Create required dependencies
     bus_type = BusType(type_id=1, name="Double Decker", capacity=80)
     operator = Operator(operator_id=1, operator_code="OP1", name="Test Operator")
     db_session.add_all([bus_type, operator])
     db_session.commit()
 
-    # Create a bus that depends on garage 1
     test_bus = Bus(
         bus_id="BUS001", reg_num="TEST001", bus_type_id=1, garage_id=1, operator_id=1
     )
     db_session.add(test_bus)
     db_session.commit()
 
-    # Now try to delete the garage
     response = client.delete("/garages/1")
     assert response.status_code == 400
     assert "Cannot delete garage" in response.json()["detail"]
 
-    # Verify garage still exists
     response = client.get("/garages/1")
     assert response.status_code == 200

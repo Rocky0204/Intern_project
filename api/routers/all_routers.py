@@ -1,10 +1,7 @@
-# api/routers/all_routers.py
-
-# Import all individual routers
 from . import (
     bus,
     bus_type,
-    block,  # Ensure this is imported
+    block,
     demand,
     emulator_log,
     garage,
@@ -23,11 +20,10 @@ from . import (
     simulator,
 )
 
-# Create a list of all routers
 all_routers = [
     bus.router,
     bus_type.router,
-    block.router,  # Ensure this router is included in the list
+    block.router,
     demand.router,
     emulator_log.router,
     garage.router,

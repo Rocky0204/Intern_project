@@ -1,4 +1,3 @@
-# api/routers/demand.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +8,7 @@ from ..database import get_db
 from ..models import (
     Demand,
     StopArea,
-)  # Import Demand and StopArea for foreign key validation
+)
 from ..schemas import DemandCreate, DemandRead, DemandUpdate
 
 router = APIRouter(prefix="/demand", tags=["demand"])
@@ -17,11 +16,6 @@ router = APIRouter(prefix="/demand", tags=["demand"])
 
 @router.post("/", response_model=DemandRead, status_code=status.HTTP_201_CREATED)
 def create_demand(demand: DemandCreate, db: Session = Depends(get_db)):
-    """
-    Create a new demand entry.
-    Validates that origin and destination StopArea codes exist.
-    """
-    # Validate origin StopArea
     origin_stop_area = (
         db.query(StopArea).filter(StopArea.stop_area_code == demand.origin).first()
     )
@@ -31,7 +25,6 @@ def create_demand(demand: DemandCreate, db: Session = Depends(get_db)):
             detail=f"Origin StopArea with code {demand.origin} not found.",
         )
 
-    # Validate destination StopArea
     destination_stop_area = (
         db.query(StopArea).filter(StopArea.stop_area_code == demand.destination).first()
     )
@@ -49,18 +42,14 @@ def create_demand(demand: DemandCreate, db: Session = Depends(get_db)):
         return db_demand
     except IntegrityError:
         db.rollback()
-        # This handles cases like duplicate (origin, destination, start_time, end_time) primary key
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,  # 409 Conflict for duplicate entry
+            status_code=status.HTTP_409_CONFLICT,
             detail="Demand entry with these origin, destination, start_time, and end_time already exists.",
         )
 
 
 @router.get("/", response_model=List[DemandRead])
 def read_demands(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of demand entries.
-    """
     demands = db.query(Demand).offset(skip).limit(limit).all()
     return demands
 
@@ -71,13 +60,11 @@ def read_demands(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 def read_demand(
     origin: int,
     destination: int,
-    start_time: time,  # FastAPI automatically parses time strings
-    end_time: time,  # FastAPI automatically parses time strings
+    start_time: time,
+    end_time: time,
     db: Session = Depends(get_db),
 ):
-    """
-    Retrieve a specific demand entry by its composite primary key.
-    """
+
     db_demand = (
         db.query(Demand)
         .filter(
@@ -106,10 +93,7 @@ def update_demand(
     demand: DemandUpdate,
     db: Session = Depends(get_db),
 ):
-    """
-    Update an existing demand entry.
-    Only 'count' is updatable as per schemas.py.
-    """
+    
     db_demand = (
         db.query(Demand)
         .filter(
@@ -152,9 +136,7 @@ def delete_demand(
     end_time: time,
     db: Session = Depends(get_db),
 ):
-    """
-    Delete a demand entry.
-    """
+
     db_demand = (
         db.query(Demand)
         .filter(
@@ -175,7 +157,7 @@ def delete_demand(
         db.commit()
         return {
             "message": "Demand entry deleted successfully"
-        }  # 204 No Content typically doesn't return a body
+        }
     except IntegrityError:
         db.rollback()
         raise HTTPException(

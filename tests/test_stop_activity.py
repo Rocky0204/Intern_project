@@ -5,14 +5,9 @@ from datetime import time
 from api.models import StopPoint, VehicleJourney, StopActivity
 import pytest
 
-# Assuming client_with_db and db_session are provided by conftest.py
 
 
 def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
-    """
-    Tests the creation of a new stop activity via the API.
-    """
-    # Create required parent objects in the database
     stop_point_data = {
         "atco_code": 100008,
         "name": "Test Stop Point SA Create",
@@ -28,7 +23,6 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
         db_session.refresh(db_stop_point)
     stop_point_id = db_stop_point.atco_code
 
-    # Create a dummy VehicleJourney if vj_id is used
     vj_data = {
         "departure_time": time(7, 0, 0),
         "dayshift": 1,
@@ -48,9 +42,9 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
 
     test_data = {
         "activity_type": "arrival",
-        "activity_time": "08:30:00", # Send as string
+        "activity_time": "08:30:00", 
         "pax_count": 15,
-        "stop_point_id": stop_point_id, # Use stop_point_id
+        "stop_point_id": stop_point_id, 
         "vj_id": vj_id,
     }
 
@@ -65,21 +59,17 @@ def test_create_stop_activity(client_with_db: TestClient, db_session: Session):
     assert response_data["stop_point_id"] == stop_point_id
     assert response_data["vj_id"] == vj_id
 
-    # Verify directly from the database
     db_activity = db_session.query(StopActivity).filter_by(activity_id=response_data["activity_id"]).first()
     assert db_activity is not None
     assert db_activity.activity_type == "arrival"
-    assert db_activity.activity_time == time(8, 30, 0) # Stored as time object
+    assert db_activity.activity_time == time(8, 30, 0) 
     assert db_activity.pax_count == 15
     assert db_activity.stop_point_id == stop_point_id
     assert db_activity.vj_id == vj_id
 
 
 def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
-    """
-    Tests retrieving all stop activities and filtering by stop_point_id.
-    """
-    # Create required parent objects in the database
+   
     stop_point_data_1 = {
         "atco_code": 100009,
         "name": "Test Stop Point SA Read 1",
@@ -127,7 +117,6 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
         db_session.refresh(db_vj)
     vj_id = db_vj.vj_id
 
-    # Create test activities directly in the database
     act_1 = StopActivity(
         activity_type="departure",
         activity_time=time(9, 0, 0),
@@ -145,23 +134,20 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
     db_session.add_all([act_1, act_2])
     db_session.commit()
 
-    # Test retrieving all activities
     response = client_with_db.get("/stop_activities/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 2
 
-    # Validate structure and types of returned data
     for item in data:
         assert "activity_id" in item
         assert "activity_type" in item
         assert "activity_time" in item
-        time.fromisoformat(item["activity_time"]) # Check if it's a valid ISO 8601 string
+        time.fromisoformat(item["activity_time"]) 
         assert "pax_count" in item
         assert "stop_point_id" in item
         assert "vj_id" in item
 
-    # Test filtering by stop_point_id
     response = client_with_db.get(f"/stop_activities/?stop_point_id={stop_point_id_1}")
     assert response.status_code == 200
     data = response.json()
@@ -171,10 +157,7 @@ def test_read_stop_activities(client_with_db: TestClient, db_session: Session):
 
 
 def test_read_single_stop_activity(client_with_db: TestClient, db_session: Session):
-    """
-    Tests retrieving a single stop activity by its ID.
-    """
-    # Create required parent objects in the database
+    
     stop_point_data = {
         "atco_code": 100011,
         "name": "Test Stop Point SA Single",
@@ -207,7 +190,6 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
         db_session.refresh(db_vj)
     vj_id = db_vj.vj_id
 
-    # Create a test activity directly in the database
     activity_data = {
         "activity_type": "boarding",
         "activity_time": time(10, 0, 0),
@@ -230,16 +212,12 @@ def test_read_single_stop_activity(client_with_db: TestClient, db_session: Sessi
     assert data["stop_point_id"] == stop_point_id
     assert data["vj_id"] == vj_id
 
-    # Test for non-existent activity
     response = client_with_db.get("/stop_activities/99999")
     assert response.status_code == 404
 
 
 def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
-    """
-    Tests updating an existing stop activity.
-    """
-    # Create required parent objects in the database
+   
     stop_point_data_orig = {
         "atco_code": 100012,
         "name": "Test Stop Point SA Update Orig",
@@ -305,7 +283,6 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
     vj_id_new = db_vj_new.vj_id
 
 
-    # Create the activity to be updated
     activity_data = {
         "activity_type": "alighting",
         "activity_time": time(11, 0, 0),
@@ -322,8 +299,8 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
         "activity_type": "boarding",
         "activity_time": "11:15:00",
         "pax_count": 12,
-        "stop_point_id": stop_point_id_new, # Update stop_point_id
-        "vj_id": vj_id_new, # Update vj_id
+        "stop_point_id": stop_point_id_new, 
+        "vj_id": vj_id_new, 
     }
 
     response = client_with_db.put(
@@ -338,7 +315,6 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
     assert data["stop_point_id"] == stop_point_id_new
     assert data["vj_id"] == vj_id_new
 
-    # Verify update directly from the database
     updated_db_activity = db_session.query(StopActivity).filter_by(activity_id=db_activity.activity_id).first()
     assert updated_db_activity.activity_type == "boarding"
     assert updated_db_activity.activity_time == time(11, 15, 0)
@@ -348,10 +324,7 @@ def test_update_stop_activity(client_with_db: TestClient, db_session: Session):
 
 
 def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
-    """
-    Tests deleting a stop activity.
-    """
-    # Create required parent objects in the database
+    
     stop_point_data = {
         "atco_code": 100014,
         "name": "Test Stop Point SA Delete",
@@ -384,7 +357,6 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
         db_session.refresh(db_vj)
     vj_id = db_vj.vj_id
 
-    # Create the activity to be deleted
     activity_data = {
         "activity_type": "boarding",
         "activity_time": time(12, 0, 0),
@@ -398,12 +370,10 @@ def test_delete_stop_activity(client_with_db: TestClient, db_session: Session):
     db_session.refresh(db_activity)
 
     response = client_with_db.delete(f"/stop_activities/{db_activity.activity_id}")
-    assert response.status_code == 204 # Expect 204 No Content for successful deletion
+    assert response.status_code == 204 
 
-    # Verify deletion by attempting to retrieve from the database
     deleted_db_activity = db_session.query(StopActivity).filter_by(activity_id=db_activity.activity_id).first()
     assert deleted_db_activity is None
 
-    # Test deleting a non-existent activity
     response = client_with_db.delete("/stop_activities/99999")
     assert response.status_code == 404

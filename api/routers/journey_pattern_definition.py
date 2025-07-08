@@ -1,8 +1,7 @@
-# api/routers/journey_pattern_definition.py
-from fastapi import APIRouter, Depends, HTTPException, status # Import status here
+from fastapi import APIRouter, Depends, HTTPException, status 
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import time # Ensure time is imported
+from datetime import time
 
 from api.database import get_db
 from api.models import JourneyPatternDefinition
@@ -19,15 +18,13 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=JourneyPatternDefinitionRead, status_code=status.HTTP_201_CREATED) # Add status_code here
+@router.post("/", response_model=JourneyPatternDefinitionRead, status_code=status.HTTP_201_CREATED)
 def create_journey_pattern_definition(
     definition: JourneyPatternDefinitionCreate, db: Session = Depends(get_db)
 ):
-    # Use getattr for robustness against unexpected missing attributes,
-    # though for required fields in Create schema, this is highly unusual if validation passes.
     db_definition = JourneyPatternDefinition(
         jp_id=getattr(definition, 'jp_id'),
-        stop_point_id=getattr(definition, 'stop_point_atco_code'), # Map schema's 'stop_point_atco_code' to model's 'stop_point_id'
+        stop_point_id=getattr(definition, 'stop_point_atco_code'), 
         sequence=getattr(definition, 'sequence'),
         arrival_time=getattr(definition, 'arrival_time'),
         departure_time=getattr(definition, 'departure_time'),
@@ -36,7 +33,6 @@ def create_journey_pattern_definition(
     db.commit()
     db.refresh(db_definition)
 
-    # Manually construct the response and explicitly format time objects to ISO 8601 strings
     return {
         "jp_id": db_definition.jp_id,
         "stop_point_atco_code": db_definition.stop_point_id,
@@ -50,7 +46,6 @@ def create_journey_pattern_definition(
 def read_journey_pattern_definitions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     definitions = db.query(JourneyPatternDefinition).offset(skip).limit(limit).all()
     
-    # Manually construct list of dictionaries for the response model, formatting time
     response_definitions = []
     for db_def in definitions:
         response_definitions.append({
@@ -78,7 +73,6 @@ def read_single_journey_pattern_definition(
     if db_definition is None:
         raise HTTPException(status_code=404, detail="Journey pattern definition not found")
     
-    # Manually construct the dictionary for the response model, formatting time
     return {
         "jp_id": db_definition.jp_id,
         "stop_point_atco_code": db_definition.stop_point_id,
@@ -106,7 +100,6 @@ def update_journey_pattern_definition(
     if db_definition is None:
         raise HTTPException(status_code=404, detail="Journey pattern definition not found")
 
-    # Use getattr to safely access optional attributes from the update schema
     stop_point_atco_code_val = getattr(definition, 'stop_point_atco_code', None)
     if stop_point_atco_code_val is not None:
         db_definition.stop_point_id = stop_point_atco_code_val
@@ -122,7 +115,6 @@ def update_journey_pattern_definition(
     db.commit()
     db.refresh(db_definition)
 
-    # Manually construct the response and format time objects
     return {
         "jp_id": db_definition.jp_id,
         "stop_point_atco_code": db_definition.stop_point_id,

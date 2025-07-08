@@ -11,7 +11,6 @@ router = APIRouter(prefix="/buses", tags=["buses"])
 
 @router.post("/", response_model=BusRead)
 def create_bus(bus: BusCreate, db: Session = Depends(get_db)):
-    # Check if bus with same reg_num already exists
     existing_bus = db.query(Bus).filter(Bus.reg_num == bus.reg_num).first()
     if existing_bus:
         raise HTTPException(
@@ -47,7 +46,6 @@ def update_bus(bus_id: str, bus: BusUpdate, db: Session = Depends(get_db)):
 
     update_data = bus.model_dump(exclude_unset=True)
 
-    # Handle the special case where registration_number in schema maps to reg_num in model
     if "registration_number" in update_data:
         update_data["reg_num"] = update_data.pop("registration_number")
 

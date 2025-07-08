@@ -11,7 +11,6 @@ router = APIRouter(prefix="/routes", tags=["routes"])
 
 @router.post("/", response_model=RouteRead)
 def create_route(route: RouteCreate, db: Session = Depends(get_db)):
-    # Verify operator exists
     db_operator = (
         db.query(Operator).filter(Operator.operator_id == route.operator_id).first()
     )
@@ -47,7 +46,6 @@ def update_route(route_id: int, route: RouteUpdate, db: Session = Depends(get_db
 
     update_data = route.model_dump(exclude_unset=True)
 
-    # Verify new operator exists if being updated
     if "operator_id" in update_data:
         db_operator = (
             db.query(Operator)
@@ -71,7 +69,6 @@ def delete_route(route_id: int, db: Session = Depends(get_db)):
     if db_route is None:
         raise HTTPException(status_code=404, detail="Route not found")
 
-    # Check for dependent records
     has_definitions = (
         db.query(RouteDefinition).filter(RouteDefinition.route_id == route_id).first()
         is not None
@@ -94,6 +91,4 @@ def delete_route(route_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{route_id}/definition", summary="Get route definition with stop points")
 def get_route_definition(route_id: int, db: Session = Depends(get_db)):
-    # This would be implemented to return the full route definition
-    # with ordered stop points and additional information
     pass

@@ -1,29 +1,24 @@
-# api/routers/stop_area.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import (
     IntegrityError,
-)  # Import IntegrityError for handling unique constraints
+)  
 from typing import List
 
 from ..database import get_db
-from ..models import StopArea  # Import the StopArea model
+from ..models import StopArea  
 from ..schemas import (
     StopAreaCreate,
     StopAreaRead,
     StopAreaUpdate,
-)  # Import StopArea schemas
+)  
 
 router = APIRouter(prefix="/stop_areas", tags=["stop_areas"])
 
 
 @router.post("/", response_model=StopAreaRead, status_code=status.HTTP_201_CREATED)
 def create_stop_area(stop_area: StopAreaCreate, db: Session = Depends(get_db)):
-    """
-    Create a new stop area.
-    Handles unique constraint for admin_area_code.
-    """
-    # Check for unique admin_area_code
+    
     existing_stop_area = (
         db.query(StopArea)
         .filter(StopArea.admin_area_code == stop_area.admin_area_code)
@@ -43,9 +38,6 @@ def create_stop_area(stop_area: StopAreaCreate, db: Session = Depends(get_db)):
         return db_stop_area
     except IntegrityError:
         db.rollback()
-        # This catch is mostly for other potential integrity errors,
-        # like if stop_area_code itself was unique and user-provided,
-        # but the admin_area_code check above handles the common case.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not create stop area due to a database integrity issue (e.g., duplicate primary key).",
@@ -54,18 +46,14 @@ def create_stop_area(stop_area: StopAreaCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[StopAreaRead])
 def read_stop_areas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of stop areas.
-    """
+  
     stop_areas = db.query(StopArea).offset(skip).limit(limit).all()
     return stop_areas
 
 
 @router.get("/{stop_area_code}", response_model=StopAreaRead)
 def read_stop_area(stop_area_code: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific stop area by code.
-    """
+  
     db_stop_area = (
         db.query(StopArea).filter(StopArea.stop_area_code == stop_area_code).first()
     )
@@ -80,10 +68,7 @@ def read_stop_area(stop_area_code: int, db: Session = Depends(get_db)):
 def update_stop_area(
     stop_area_code: int, stop_area: StopAreaUpdate, db: Session = Depends(get_db)
 ):
-    """
-    Update an existing stop area.
-    Handles unique constraint for admin_area_code during update.
-    """
+   
     db_stop_area = (
         db.query(StopArea).filter(StopArea.stop_area_code == stop_area_code).first()
     )
@@ -94,7 +79,6 @@ def update_stop_area(
 
     update_data = stop_area.model_dump(exclude_unset=True)
 
-    # Check for unique admin_area_code if it's being updated
     if (
         "admin_area_code" in update_data
         and update_data["admin_area_code"] != db_stop_area.admin_area_code
@@ -127,9 +111,7 @@ def update_stop_area(
 
 @router.delete("/{stop_area_code}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_stop_area(stop_area_code: int, db: Session = Depends(get_db)):
-    """
-    Delete a stop area.
-    """
+  
     db_stop_area = (
         db.query(StopArea).filter(StopArea.stop_area_code == stop_area_code).first()
     )
@@ -138,22 +120,13 @@ def delete_stop_area(stop_area_code: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, detail="Stop area not found"
         )
 
-    # Check for dependencies (e.g., StopPoints linked to this StopArea)
-    # This is crucial to prevent IntegrityError on delete if cascade is not set up
-    # or if you want a more user-friendly error.
-    # Example:
-    # if db_stop_area.stop_points:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Cannot delete stop area with associated stop points. Delete stop points first."
-    #     )
 
     try:
         db.delete(db_stop_area)
         db.commit()
         return {
             "message": "Stop area deleted successfully"
-        }  # 204 No Content typically doesn't return a body
+        }  
     except IntegrityError:
         db.rollback()
         raise HTTPException(

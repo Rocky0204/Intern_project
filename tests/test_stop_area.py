@@ -1,22 +1,13 @@
-# tests/test_stop_area.py
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
-
-# Add these lines to fix module import paths
 import os
 import sys
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-
-
 from api.main import app
 from api.database import get_db
-
-# Import all models that might be created or need cleanup in tests
-# Added Garage to the import list
 from api.models import (
     Base,
     StopArea,
@@ -38,7 +29,6 @@ from api.models import (
     Garage,
 )
 
-# --- Database Setup for Tests (self-contained, as requested) ---
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -46,7 +36,6 @@ engine = create_engine(
 )
 
 
-# Ensure foreign key enforcement for SQLite using an event listener
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -59,7 +48,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="module")
 def setup_db():
-    """Creates all tables before tests in this module run, and drops them afterwards."""
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -67,17 +55,11 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    """
-    Provides a transactional database session for each test function.
-    Ensures a clean state for every test by rolling back changes.
-    Cleans up all relevant tables before each test.
-    """
+   
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Comprehensive cleanup for all tables that might have data from fixtures or previous tests
-    # Order matters for foreign key constraints (delete children before parents)
     session.query(EmulatorLog).delete()
     session.query(Demand).delete()
     session.query(StopActivity).delete()
@@ -92,9 +74,9 @@ def db_session(setup_db):
     session.query(Line).delete()
     session.query(Operator).delete()
     session.query(BusType).delete()
-    session.query(Garage).delete()  # Now Garage is imported and should be recognized
+    session.query(Garage).delete() 
     session.query(StopPoint).delete()
-    session.query(StopArea).delete()  # Delete StopArea last as it's a parent
+    session.query(StopArea).delete()  
     session.commit()
 
     try:
@@ -107,7 +89,6 @@ def db_session(setup_db):
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-    """Overrides the get_db dependency to use the test database session."""
 
     def override_get_db():
         try:
@@ -121,7 +102,6 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-# --- Reusable Test Data Fixtures ---
 
 
 @pytest.fixture(scope="function")
@@ -139,7 +119,6 @@ def test_stop_area(db_session: Session):
     return stop_area
 
 
-# --- Test Functions for StopArea ---
 
 
 def test_create_stop_area(client: TestClient, db_session: Session):
@@ -157,7 +136,6 @@ def test_create_stop_area(client: TestClient, db_session: Session):
     assert data["name"] == stop_area_data["name"]
     assert data["is_terminal"] == stop_area_data["is_terminal"]
 
-    # Verify in DB
     db_sa = db_session.query(StopArea).filter(StopArea.stop_area_code == 1002).first()
     assert db_sa is not None
     assert db_sa.name == "North Side Terminal"
@@ -168,7 +146,7 @@ def test_create_stop_area_duplicate_admin_area_code(
 ):
     duplicate_data = {
         "stop_area_code": 1003,
-        "admin_area_code": test_stop_area.admin_area_code,  # Duplicate admin_area_code
+        "admin_area_code": test_stop_area.admin_area_code, 
         "name": "Another Terminal",
         "is_terminal": True,
     }
@@ -206,7 +184,6 @@ def test_update_stop_area(
     assert data["name"] == update_data["name"]
     assert data["is_terminal"] == update_data["is_terminal"]
 
-    # Verify in DB
     db_sa = (
         db_session.query(StopArea)
         .filter(StopArea.stop_area_code == test_stop_area.stop_area_code)
@@ -219,7 +196,6 @@ def test_update_stop_area(
 def test_update_stop_area_duplicate_admin_area_code(
     client: TestClient, db_session: Session
 ):
-    # Create a second stop area
     sa2 = StopArea(
         stop_area_code=1003,
         admin_area_code="ADM003",
@@ -230,11 +206,10 @@ def test_update_stop_area_duplicate_admin_area_code(
     db_session.commit()
     db_session.refresh(sa2)
 
-    # Try to update test_stop_area with sa2's admin_area_code
     test_sa = (
         db_session.query(StopArea).filter(StopArea.stop_area_code == 1001).first()
-    )  # Assuming 1001 is the ID of test_stop_area
-    if not test_sa:  # If test_stop_area was not created by a fixture, create it here
+    )  
+    if not test_sa:  
         test_sa = StopArea(
             stop_area_code=1001,
             admin_area_code="ADM001",
@@ -247,7 +222,7 @@ def test_update_stop_area_duplicate_admin_area_code(
 
     update_data = {
         "admin_area_code": sa2.admin_area_code
-    }  # Try to use existing admin_area_code
+    }  
     response = client.put(f"/stop_areas/{test_sa.stop_area_code}", json=update_data)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert "already exists" in response.json()["detail"]
@@ -260,9 +235,8 @@ def test_delete_stop_area(
     response = client.delete(f"/stop_areas/{stop_area_code_to_delete}")
     assert (
         response.status_code == status.HTTP_204_NO_CONTENT
-    )  # 204 No Content for successful deletion
+    )  
 
-    # Verify in DB
     db_sa = (
         db_session.query(StopArea)
         .filter(StopArea.stop_area_code == stop_area_code_to_delete)
@@ -285,22 +259,3 @@ def test_update_nonexistent_stop_area(client: TestClient):
 def test_delete_nonexistent_stop_area(client: TestClient):
     response = client.delete("/stop_areas/99999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-# Example of a test for deleting a stop area with dependencies (if you implement this logic)
-# def test_delete_stop_area_with_dependencies(client: TestClient, db_session: Session, test_stop_area: StopArea):
-#     # Create a StopPoint linked to test_stop_area
-#     stop_point = StopPoint(
-#         atco_code=2001,
-#         name="Test Stop Point",
-#         latitude=51.0,
-#         longitude=0.0,
-#         stop_area_code=test_stop_area.stop_area_code
-#     )
-#     db_session.add(stop_point)
-#     db_session.commit()
-#     db_session.refresh(stop_point)
-
-#     response = client.delete(f"/stop_areas/{test_stop_area.stop_area_code}")
-#     assert response.status_code == status.HTTP_400_BAD_REQUEST # Or 500 if DB error
-#     assert "Cannot delete stop area due to existing dependencies" in response.json()["detail"] # Adjust message

@@ -1,4 +1,3 @@
-# api/routers/vehicle_journey.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +11,7 @@ from ..models import (
     Operator,
     Line,
     Service,
-)  # Import VehicleJourney model and its dependencies
+) 
 from ..schemas import VehicleJourneyCreate, VehicleJourneyRead, VehicleJourneyUpdate
 
 router = APIRouter(prefix="/vehicle_journeys", tags=["vehicle_journeys"])
@@ -22,11 +21,7 @@ router = APIRouter(prefix="/vehicle_journeys", tags=["vehicle_journeys"])
     "/", response_model=VehicleJourneyRead, status_code=status.HTTP_201_CREATED
 )
 def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_db)):
-    """
-    Create a new vehicle journey.
-    Requires existing jp_id, block_id, operator_id, line_id, and service_id.
-    """
-    # Check if jp_id exists
+    
     journey_pattern = (
         db.query(JourneyPattern).filter(JourneyPattern.jp_id == vj.jp_id).first()
     )
@@ -36,7 +31,6 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
             detail=f"JourneyPattern with ID {vj.jp_id} not found.",
         )
 
-    # Check if block_id exists
     block = db.query(Block).filter(Block.block_id == vj.block_id).first()
     if not block:
         raise HTTPException(
@@ -44,7 +38,6 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
             detail=f"Block with ID {vj.block_id} not found.",
         )
 
-    # Check if operator_id exists
     operator = db.query(Operator).filter(Operator.operator_id == vj.operator_id).first()
     if not operator:
         raise HTTPException(
@@ -52,7 +45,6 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
             detail=f"Operator with ID {vj.operator_id} not found.",
         )
 
-    # Check if line_id exists
     line = db.query(Line).filter(Line.line_id == vj.line_id).first()
     if not line:
         raise HTTPException(
@@ -60,7 +52,6 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
             detail=f"Line with ID {vj.line_id} not found.",
         )
 
-    # Check if service_id exists
     service = db.query(Service).filter(Service.service_id == vj.service_id).first()
     if not service:
         raise HTTPException(
@@ -86,18 +77,14 @@ def create_vehicle_journey(vj: VehicleJourneyCreate, db: Session = Depends(get_d
 def read_vehicle_journeys(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
-    """
-    Retrieve a list of vehicle journeys.
-    """
+    
     vehicle_journeys = db.query(VehicleJourney).offset(skip).limit(limit).all()
     return vehicle_journeys
 
 
 @router.get("/{vj_id}", response_model=VehicleJourneyRead)
 def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific vehicle journey by ID.
-    """
+    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(
@@ -110,9 +97,7 @@ def read_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
 def update_vehicle_journey(
     vj_id: int, vj: VehicleJourneyUpdate, db: Session = Depends(get_db)
 ):
-    """
-    Update an existing vehicle journey.
-    """
+    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(
@@ -121,7 +106,6 @@ def update_vehicle_journey(
 
     update_data = vj.model_dump(exclude_unset=True)
 
-    # Check for existence of foreign key dependencies if they are being updated
     if "jp_id" in update_data:
         journey_pattern = (
             db.query(JourneyPattern)
@@ -193,9 +177,7 @@ def update_vehicle_journey(
 
 @router.delete("/{vj_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vehicle_journey(vj_id: int, db: Session = Depends(get_db)):
-    """
-    Delete a vehicle journey.
-    """
+    
     db_vj = db.query(VehicleJourney).filter(VehicleJourney.vj_id == vj_id).first()
     if db_vj is None:
         raise HTTPException(

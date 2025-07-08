@@ -1,4 +1,3 @@
-# api/routers/route_definition.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -23,7 +22,6 @@ router = APIRouter(
 def create_route_definition(
     definition: RouteDefinitionCreate, db: Session = Depends(get_db)
 ):
-    # Check if route_id and stop_point_id exist
     route = db.query(Route).filter(Route.route_id == definition.route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail=f"Route with ID {definition.route_id} not found")
@@ -32,7 +30,6 @@ def create_route_definition(
     if not stop_point:
         raise HTTPException(status_code=404, detail=f"Stop Point with ATCO Code {definition.stop_point_id} not found")
 
-    # Check for existing entry with same primary keys
     existing_definition = (
         db.query(RouteDefinition)
         .filter(
@@ -48,7 +45,7 @@ def create_route_definition(
 
     db_definition = RouteDefinition(
         route_id=definition.route_id,
-        stop_point_id=definition.stop_point_id, # Correctly use stop_point_id
+        stop_point_id=definition.stop_point_id, 
         sequence=definition.sequence,
     )
     db.add(db_definition)
@@ -66,7 +63,6 @@ def read_route_definitions(
         query = query.filter(RouteDefinition.route_id == route_id)
     definitions = query.offset(skip).limit(limit).all()
     
-    # Manually serialize to match RouteDefinitionRead schema
     response_list = []
     for definition in definitions:
         response_list.append({
@@ -117,7 +113,6 @@ def update_route_definition(
         raise HTTPException(status_code=404, detail="Route definition not found")
 
     if definition_update.stop_point_id is not None:
-        # Check if the new stop_point_id exists as a StopPoint
         new_stop_point = db.query(StopPoint).filter(StopPoint.atco_code == definition_update.stop_point_id).first()
         if not new_stop_point:
             raise HTTPException(status_code=404, detail=f"New Stop Point with ATCO Code {definition_update.stop_point_id} not found")

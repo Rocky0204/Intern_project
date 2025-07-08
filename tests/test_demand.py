@@ -1,12 +1,10 @@
-# tests/test_demand.py
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
-from datetime import time  # Import time for time objects in tests
+from datetime import time  
 
-# Add these lines to fix module import paths
 import os
 import sys
 
@@ -16,7 +14,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../"
 from api.main import app
 from api.database import get_db
 
-# Import all models that might be created or need cleanup in tests
 from api.models import (
     Base,
     StopArea,
@@ -38,7 +35,6 @@ from api.models import (
     Garage,
 )
 
-# --- Database Setup for Tests (self-contained, as requested) ---
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -46,7 +42,6 @@ engine = create_engine(
 )
 
 
-# Ensure foreign key enforcement for SQLite using an event listener
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -59,7 +54,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="module")
 def setup_db():
-    """Creates all tables before tests in this module run, and drops them afterwards."""
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -67,19 +61,12 @@ def setup_db():
 
 @pytest.fixture(scope="function")
 def db_session(setup_db):
-    """
-    Provides a transactional database session for each test function.
-    Ensures a clean state for every test by rolling back changes.
-    Cleans up all relevant tables before each test.
-    """
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Comprehensive cleanup for all tables that might have data from fixtures or previous tests
-    # Order matters for foreign key constraints (delete children before parents)
     session.query(EmulatorLog).delete()
-    session.query(Demand).delete()  # Demand cleanup
+    session.query(Demand).delete() 
     session.query(StopActivity).delete()
     session.query(VehicleJourney).delete()
     session.query(JourneyPatternDefinition).delete()
@@ -95,41 +82,33 @@ def db_session(setup_db):
     session.query(Garage).delete()
     session.query(StopPoint).delete()
     session.query(StopArea).delete()
-    session.commit()  # Commit the deletions to ensure a clean state before the test starts
+    session.commit() 
 
     try:
         yield session
     finally:
-        # Only rollback if the transaction is still active/valid
         if transaction.is_active:
             transaction.rollback()
-        # Close the session and connection
         session.close()
         connection.close()
 
 
 @pytest.fixture(scope="function")
 def client(db_session: Session):
-    """Overrides the get_db dependency to use the test database session."""
 
     def override_get_db():
         try:
             yield db_session
         finally:
-            pass  # The session is closed by the db_session fixture's finally block
-
+            pass  
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
 
 
-# --- Reusable Test Data Fixtures ---
-
-
 @pytest.fixture(scope="function")
 def test_stop_area_origin(db_session: Session):
-    """Creates and returns a test StopArea for use as origin."""
     stop_area = StopArea(
         stop_area_code=101,
         admin_area_code="ADM_DEM_001",
@@ -144,7 +123,6 @@ def test_stop_area_origin(db_session: Session):
 
 @pytest.fixture(scope="function")
 def test_stop_area_destination(db_session: Session):
-    """Creates and returns a test StopArea for use as destination."""
     stop_area = StopArea(
         stop_area_code=102,
         admin_area_code="ADM_DEM_002",
@@ -163,11 +141,7 @@ def test_demand(
     test_stop_area_origin: StopArea,
     test_stop_area_destination: StopArea,
 ):
-    """
-    Creates and returns a test Demand entry.
-    Note: This fixture now commits the demand entry. For tests specifically
-    testing duplicate entries, they will need to create their own conflicting data.
-    """
+
     demand_entry = Demand(
         origin=test_stop_area_origin.stop_area_code,
         destination=test_stop_area_destination.stop_area_code,
@@ -181,12 +155,8 @@ def test_demand(
     return demand_entry
 
 
-# Helper function to format time for URL paths
 def format_time_for_url(t: time) -> str:
     return t.strftime("%H:%M:%S")
-
-
-# --- Test Functions for Demand ---
 
 
 def test_create_demand(
@@ -211,7 +181,6 @@ def test_create_demand(
     assert data["start_time"] == demand_data["start_time"]
     assert data["end_time"] == demand_data["end_time"]
 
-    # Verify in DB
     db_demand = (
         db_session.query(Demand)
         .filter(
@@ -232,7 +201,6 @@ def test_create_demand_duplicate_entry(
     test_stop_area_origin: StopArea,
     test_stop_area_destination: StopArea,
 ):
-    # Define the data for the initial demand entry
     initial_demand_data = {
         "origin": test_stop_area_origin.stop_area_code,
         "destination": test_stop_area_destination.stop_area_code,
@@ -241,7 +209,6 @@ def test_create_demand_duplicate_entry(
         "end_time": time(9, 0, 0),
     }
 
-    # Create the initial demand entry directly in the session
     initial_demand = Demand(
         origin=initial_demand_data["origin"],
         destination=initial_demand_data["destination"],
@@ -250,22 +217,21 @@ def test_create_demand_duplicate_entry(
         end_time=initial_demand_data["end_time"],
     )
     db_session.add(initial_demand)
-    db_session.commit()  # Commit this initial entry
+    db_session.commit()  
     db_session.expunge(
         initial_demand
-    )  # <--- IMPORTANT: Expunge the object from the session
+    )  
 
-    # Now attempt to create a duplicate via the API, using the original data dictionary
     duplicate_data = {
         "origin": initial_demand_data["origin"],
         "destination": initial_demand_data["destination"],
-        "count": 20.0,  # Count can be different, but PK is same
+        "count": 20.0,  
         "start_time": format_time_for_url(
             initial_demand_data["start_time"]
-        ),  # Use data from dictionary
+        ),  
         "end_time": format_time_for_url(
             initial_demand_data["end_time"]
-        ),  # Use data from dictionary
+        ), 
     }
     response = client.post("/demand/", json=duplicate_data)
     assert response.status_code == status.HTTP_409_CONFLICT
@@ -279,7 +245,7 @@ def test_create_demand_invalid_origin(
     client: TestClient, db_session: Session, test_stop_area_destination: StopArea
 ):
     demand_data = {
-        "origin": 99999,  # Non-existent origin
+        "origin": 99999, 
         "destination": test_stop_area_destination.stop_area_code,
         "count": 5.0,
         "start_time": "11:00:00",
@@ -295,7 +261,7 @@ def test_create_demand_invalid_destination(
 ):
     demand_data = {
         "origin": test_stop_area_origin.stop_area_code,
-        "destination": 99999,  # Non-existent destination
+        "destination": 99999,  
         "count": 7.0,
         "start_time": "13:00:00",
         "end_time": "14:00:00",
@@ -352,7 +318,6 @@ def test_update_demand(client: TestClient, db_session: Session, test_demand: Dem
     data = response.json()
     assert data["count"] == update_data["count"]
 
-    # Verify in DB
     db_demand = (
         db_session.query(Demand)
         .filter(
@@ -376,7 +341,6 @@ def test_delete_demand(client: TestClient, db_session: Session, test_demand: Dem
     response = client.delete(url)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    # Verify in DB
     db_demand = (
         db_session.query(Demand)
         .filter(

@@ -1,4 +1,3 @@
-# api/schemas.py
 from datetime import datetime, time
 from enum import IntEnum
 from pydantic import BaseModel, ConfigDict
@@ -29,7 +28,7 @@ class BusUpdate(BaseModel):
     bus_type_id: Optional[int] = None
 
 
-# ───── OPERATOR ─────
+# ───── Operator ─────
 class OperatorBase(BaseModel):
     operator_code: str
     name: str
@@ -49,7 +48,7 @@ class OperatorUpdate(BaseModel):
     name: Optional[str] = None
 
 
-# ───── GARAGE ─────
+# ───── Garage ─────
 class GarageBase(BaseModel):
     name: str
     capacity: int
@@ -240,7 +239,7 @@ class StopActivityBase(BaseModel):
     activity_type: str
     activity_time: time
     pax_count: int
-    stop_point_id: int # Changed from atco_code to stop_point_id to match model
+    stop_point_id: int  
     vj_id: int
 
 
@@ -279,8 +278,6 @@ class JourneyPatternDefinitionRead(JourneyPatternDefinitionBase):
 
 
 class JourneyPatternDefinitionUpdate(BaseModel):
-    # jp_id and sequence are part of the composite primary key and passed in URL,
-    # so they should not be in the request body for updates.
     stop_point_atco_code: Optional[int] = None
     arrival_time: Optional[time] = None
     departure_time: Optional[time] = None
@@ -288,7 +285,7 @@ class JourneyPatternDefinitionUpdate(BaseModel):
 # ───── RouteDefinition ─────
 class RouteDefinitionBase(BaseModel):
     route_id: int
-    stop_point_id: int # Changed from stop_point_atco_code to stop_point_id
+    stop_point_id: int
     sequence: int
 
 
@@ -390,14 +387,11 @@ class EmulatorLogBase(BaseModel):
     status: RunStatus
 
 
-# New schema for detailed optimization results, with all fields optional
 class OptimizationDetailsRead(BaseModel):
-    status: Optional[str] = None  # e.g., "OPTIMAL", "FEASIBLE", "ERROR"
-    message: Optional[str] = None # For error messages or success messages
+    status: Optional[str] = None  
+    message: Optional[str] = None 
     total_passengers_served: Optional[int] = None
-    schedule: Optional[List[Dict[str, Any]]] = None # Assuming schedule is a list of dicts
-
-    # Fields that were complained about as "required" in previous errors
+    schedule: Optional[List[Dict[str, Any]]] = None 
     solver_runtime_ms: Optional[float] = None
     solver_iterations: Optional[int] = None
     buses_assigned_summary: Optional[Dict[str, Any]] = None
@@ -406,8 +400,6 @@ class OptimizationDetailsRead(BaseModel):
 
 
 class EmulatorLogCreate(EmulatorLogBase):
-    # For creation, status is the only required field from the client.
-    # started_at, last_updated, and optimization_details are handled by the server.
     optimization_details: Optional[OptimizationDetailsRead] = None
     pass
 
@@ -416,13 +408,11 @@ class EmulatorLogRead(EmulatorLogBase):
     run_id: int
     started_at: datetime
     last_updated: datetime
-    # Now explicitly link to the new OptimizationDetailsRead schema
     optimization_details: Optional[OptimizationDetailsRead] = None
     # model_config = ConfigDict(from_attributes=True)
 
 
 class EmulatorLogUpdate(BaseModel):
     status: Optional[RunStatus] = None
-    # Use the new Optional OptimizationDetailsRead schema for updates too
     optimization_details: Optional[OptimizationDetailsRead] = None
     model_config = ConfigDict(from_attributes=True)

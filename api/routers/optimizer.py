@@ -1,6 +1,5 @@
-# api/routers/optimizer.py
 import logging
-import json # Add json import
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -56,11 +55,10 @@ async def run_frequency_optimization(
         
         logger.debug(f"Optimizer returned: {optimization_result}")
         
-        # Store optimization_result as a JSON string
         if isinstance(optimization_result, dict):
             db_log_entry.optimization_details = json.dumps(optimization_result)
         else:
-            db_log_entry.optimization_details = None # Or convert non-dict to string if appropriate
+            db_log_entry.optimization_details = None 
 
 
         if isinstance(optimization_result, dict) and optimization_result.get("status") in ["OPTIMAL", "FEASIBLE"]:
@@ -74,15 +72,13 @@ async def run_frequency_optimization(
         db.commit()
         db.refresh(db_log_entry)
         
-        # Manually parse optimization_details before returning to Pydantic for response_model validation
         parsed_optimization_details = None
         if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
             try:
                 parsed_optimization_details = json.loads(db_log_entry.optimization_details)
             except json.JSONDecodeError:
-                parsed_optimization_details = None # Treat invalid JSON as None
+                parsed_optimization_details = None 
 
-        # Create a dictionary to pass to Pydantic for validation
         log_data_for_pydantic = {
             "run_id": db_log_entry.run_id,
             "status": db_log_entry.status,
@@ -91,7 +87,7 @@ async def run_frequency_optimization(
             "optimization_details": parsed_optimization_details,
         }
         
-        return log_data_for_pydantic # Return the prepared dictionary
+        return log_data_for_pydantic 
 
     except Exception as e:
         logger.exception(f"API: An error occurred during frequency optimization run_id {db_log_entry.run_id}: {e}")
@@ -100,7 +96,6 @@ async def run_frequency_optimization(
         db.commit()
         db.refresh(db_log_entry)
         
-        # Ensure error response also handles optimization_details correctly
         parsed_details_on_error = None
         if isinstance(db_log_entry.optimization_details, str) and db_log_entry.optimization_details:
             try:
@@ -115,9 +110,8 @@ async def run_frequency_optimization(
             "last_updated": db_log_entry.last_updated,
             "optimization_details": parsed_details_on_error,
         }
-        # Raise HTTP exception with the correct response_model structure
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"message": f"Optimization failed for run_id {db_log_entry.run_id}", "details": str(e)},
-            headers={"X-Content-Type-Options": "nosniff"} # Example header
+            headers={"X-Content-Type-Options": "nosniff"} 
         )

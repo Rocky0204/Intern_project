@@ -11,7 +11,6 @@ router = APIRouter(prefix="/garages", tags=["garages"])
 
 @router.post("/", response_model=GarageRead)
 def create_garage(garage: GarageCreate, db: Session = Depends(get_db)):
-    # Check if garage with same name already exists
     existing_garage = db.query(Garage).filter(Garage.name == garage.name).first()
     if existing_garage:
         raise HTTPException(
@@ -47,7 +46,6 @@ def update_garage(garage_id: int, garage: GarageUpdate, db: Session = Depends(ge
 
     update_data = garage.model_dump(exclude_unset=True)
 
-    # Check if updating to an existing garage name
     if "name" in update_data:
         existing = (
             db.query(Garage)
@@ -73,7 +71,6 @@ def delete_garage(garage_id: int, db: Session = Depends(get_db)):
     if db_garage is None:
         raise HTTPException(status_code=404, detail="Garage not found")
 
-    # Check if garage has any buses assigned
     if db.query(Bus).filter(Bus.garage_id == garage_id).first():
         raise HTTPException(
             status_code=400, detail="Cannot delete garage with assigned buses"

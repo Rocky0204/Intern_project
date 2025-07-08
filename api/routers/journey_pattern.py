@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from ..database import get_db
-from ..models import JourneyPattern  # Removed JourneyPatternDefinition as it's not used
+from ..models import JourneyPattern 
 from ..schemas import JourneyPatternCreate, JourneyPatternRead, JourneyPatternUpdate
 
 router = APIRouter(

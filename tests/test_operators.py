@@ -8,7 +8,6 @@ from api.models import Base
 from api.database import get_db
 from api.models import Operator
 
-# Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -29,11 +28,9 @@ def db_session(setup_db):
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Clear existing data
     session.query(Operator).delete()
     session.commit()
 
-    # Add test operator
     test_operator = Operator(operator_id=1, operator_code="OP1", name="Test Operator")
     session.add(test_operator)
     session.commit()
@@ -95,17 +92,14 @@ def test_update_operator(client):
 
 
 def test_delete_operator(client, db_session):
-    # First create an operator with no dependencies
     new_op = Operator(operator_id=2, operator_code="OPD", name="To Delete")
     db_session.add(new_op)
     db_session.commit()
 
-    # Now delete it
     response = client.delete("/operators/2")
     assert response.status_code == 200
     assert response.json()["message"] == "Operator deleted successfully"
 
-    # Verify it's gone
     response = client.get("/operators/2")
     assert response.status_code == 404
 
@@ -114,7 +108,7 @@ def test_duplicate_operator_code(client):
     response = client.post(
         "/operators/",
         json={
-            "operator_code": "OP1",  # Duplicate of existing operator
+            "operator_code": "OP1",  
             "name": "Duplicate Operator",
         },
     )
@@ -123,10 +117,8 @@ def test_duplicate_operator_code(client):
 
 
 def test_delete_operator_with_dependencies(client, db_session):
-    # First create a bus that depends on the operator
     from api.models import BusType, Garage, Bus
 
-    # Create required dependencies
     bus_type = BusType(type_id=2, name="Mini Bus", capacity=20)
     garage = Garage(
         garage_id=2, name="Test Garage", capacity=10, latitude=0, longitude=0
@@ -134,18 +126,16 @@ def test_delete_operator_with_dependencies(client, db_session):
     db_session.add_all([bus_type, garage])
     db_session.commit()
 
-    # Create a bus that depends on operator 1
     test_bus = Bus(
         bus_id="BUS001",
         reg_num="TEST001",
         bus_type_id=2,
         garage_id=2,
-        operator_id=1,  # Depends on our test operator
+        operator_id=1,  
     )
     db_session.add(test_bus)
     db_session.commit()
 
-    # Now try to delete the operator
     response = client.delete("/operators/1")
     assert response.status_code == 400
     error_detail = response.json()["detail"].lower()

@@ -1,10 +1,9 @@
-# api/routers/services.py
-from fastapi import APIRouter, Depends, HTTPException, status  # Import status
+from fastapi import APIRouter, Depends, HTTPException, status  
 from sqlalchemy.orm import Session
 from typing import List
 
 from ..database import get_db
-from ..models import Service, Operator, Line  # Import Operator and Line
+from ..models import Service, Operator, Line  
 from ..schemas import ServiceCreate, ServiceRead, ServiceUpdate
 
 router = APIRouter(prefix="/services", tags=["services"])
@@ -12,10 +11,6 @@ router = APIRouter(prefix="/services", tags=["services"])
 
 @router.post("/", response_model=ServiceRead)
 def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
-    """
-    Create a new service.
-    """
-    # Check if operator exists
     operator = (
         db.query(Operator).filter(Operator.operator_id == service.operator_id).first()
     )
@@ -25,7 +20,6 @@ def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
             detail=f"Operator with ID {service.operator_id} not found.",
         )
 
-    # Check if line exists
     line = db.query(Line).filter(Line.line_id == service.line_id).first()
     if not line:
         raise HTTPException(
@@ -42,18 +36,14 @@ def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[ServiceRead])
 def read_services(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of services.
-    """
+   
     services = db.query(Service).offset(skip).limit(limit).all()
     return services
 
 
 @router.get("/{service_id}", response_model=ServiceRead)
 def read_service(service_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific service by ID.
-    """
+  
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -64,9 +54,7 @@ def read_service(service_id: int, db: Session = Depends(get_db)):
 def update_service(
     service_id: int, service: ServiceUpdate, db: Session = Depends(get_db)
 ):
-    """
-    Update a service.
-    """
+    
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -82,9 +70,7 @@ def update_service(
 
 @router.delete("/{service_id}", response_model=dict)
 def delete_service(service_id: int, db: Session = Depends(get_db)):
-    """
-    Delete a service.
-    """
+    
     db_service = db.query(Service).filter(Service.service_id == service_id).first()
     if db_service is None:
         raise HTTPException(status_code=404, detail="Service not found")

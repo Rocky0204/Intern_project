@@ -1,27 +1,22 @@
-# tests/test_emulator_log.py
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
-from datetime import datetime, time, timezone # Import timezone for consistent datetime handling
+from datetime import datetime, time, timezone 
 import json
-from unittest.mock import MagicMock # Import MagicMock
+from unittest.mock import MagicMock 
 
 from api.models import Base, EmulatorLog, Demand, StopArea, StopPoint, BusType, Operator, Garage, Bus, Route, RouteDefinition
 from api.schemas import RunStatus, OptimizationDetailsRead
 from api.main import app
 from api.database import get_db
 
-# Database setup
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
 @pytest.fixture(scope="function")
 def test_db_session():
-    """
-    Provides a clean in-memory SQLite database session for each test function.
-    Ensures that the database schema is created and dropped for isolation.
-    """
+
     engine = create_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -45,15 +40,11 @@ def test_db_session():
 
 @pytest.fixture(scope="function")
 def client_with_db(test_db_session: Session):
-    """
-    Provides a FastAPI TestClient configured to use the test database session.
-    Overrides the get_db dependency for testing.
-    """
+    
     def override_get_db():
         try:
             yield test_db_session
         finally:
-            # The session is closed by the test_db_session fixture's finally block
             pass 
 
     app.dependency_overrides[get_db] = override_get_db
@@ -62,11 +53,7 @@ def client_with_db(test_db_session: Session):
     app.dependency_overrides.clear()
 
 def _populate_db_for_simulation(db: Session):
-    """
-    Helper function to populate the database with minimal data required for simulation to run.
-    This prevents the "No valid default depot stop point in database" error.
-    """
-    # Clear existing data
+    
     db.query(Demand).delete()
     db.query(RouteDefinition).delete()
     db.query(Route).delete()
@@ -78,7 +65,6 @@ def _populate_db_for_simulation(db: Session):
     db.query(BusType).delete()
     db.commit()
 
-    # Create test data - minimal set to avoid BusEmulator errors
     operator = Operator(operator_id=1, operator_code="OP1", name="Operator One")
     garage = Garage(garage_id=1, name="Central Garage", latitude=0.0, longitude=0.0, capacity=100)
     bus_type = BusType(type_id=1, name="Standard Bus", capacity=50)
@@ -97,7 +83,6 @@ def _populate_db_for_simulation(db: Session):
     db.add_all([stop1, stop2])
     db.commit()
 
-    # Add a route and definitions
     route = Route(route_id=1, name="Route 1", operator_id=1)
     db.add(route)
     db.commit()
@@ -107,14 +92,12 @@ def _populate_db_for_simulation(db: Session):
     db.add_all([route_def1, route_def2])
     db.commit()
 
-    # Corrected: Use StopPoint IDs for Demand origin/destination
     demand1 = Demand(origin=1001, destination=1002, count=10, start_time=time(8,0), end_time=time(9,0))
     demand2 = Demand(origin=1002, destination=1001, count=5, start_time=time(9,30), end_time=time(10,30))
     db.add_all([demand1, demand2])
     db.commit()
 
 def test_create_emulator_log(client_with_db: TestClient, test_db_session: Session):
-    """Tests creating a new emulator log entry."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
     
@@ -126,7 +109,6 @@ def test_create_emulator_log(client_with_db: TestClient, test_db_session: Sessio
     assert response.json()["status"] == RunStatus.RUNNING.value
     
     assert test_db_session.query(EmulatorLog).count() == 1
-    # Verify that run_id, started_at, last_updated are present in the response
     assert "run_id" in response.json()
     assert "started_at" in response.json()
     assert "last_updated" in response.json()
@@ -137,21 +119,16 @@ def test_update_emulator_log_and_run_simulation_patch_exception(
     test_db_session: Session, 
     mocker
 ):
-    """
-    Tests the patch endpoint for running a simulation when BusEmulator raises an exception.
-    """
+    
     _populate_db_for_simulation(test_db_session)
     
-    # Create log entry
     db_log = EmulatorLog(status=RunStatus.QUEUED.value, started_at=datetime.now(timezone.utc))
     test_db_session.add(db_log)
     test_db_session.commit()
-    test_db_session.refresh(db_log) # Refresh to get the run_id from the database
+    test_db_session.refresh(db_log) 
 
-    # Mock BusEmulator at the path where emulator_log.py imports it
     mock_bus_emulator_class = mocker.patch("api.routers.emulator_log.BusEmulator", autospec=True)
     mock_emulator_instance = mock_bus_emulator_class.return_value
-    # IMPORTANT FIX: Set side_effect to raise an Exception to trigger the 'except' block in the API
     mock_emulator_instance.run_simulation.side_effect = Exception("Test error during simulation")
 
     response = client_with_db.patch(
@@ -164,12 +141,10 @@ def test_update_emulator_log_and_run_simulation_patch_exception(
     )
     
     assert response.status_code == 200
-    assert response.json()["status"] == RunStatus.FAILED.value # Expect FAILED status
-    # This assertion is now correct because the API's 'except' block sets status to "ERROR"
+    assert response.json()["status"] == RunStatus.FAILED.value 
     assert response.json()["optimization_details"]["status"] == "ERROR" 
     assert "Test error during simulation" in response.json()["optimization_details"]["message"]
 
-    # Verify the database state
     updated_db_log = test_db_session.query(EmulatorLog).filter(EmulatorLog.run_id == db_log.run_id).first()
     assert updated_db_log.status == RunStatus.FAILED.value
     assert updated_db_log.optimization_details_dict["status"] == "ERROR"
@@ -180,26 +155,22 @@ def test_update_emulator_log_and_run_simulation_patch_success(
     test_db_session: Session,
     mocker
 ):
-    """
-    Tests the patch endpoint for running a simulation successfully.
-    """
+   
     _populate_db_for_simulation(test_db_session)
 
-    # Create log entry
     db_log = EmulatorLog(status=RunStatus.QUEUED.value, started_at=datetime.now(timezone.utc))
     test_db_session.add(db_log)
     test_db_session.commit()
-    test_db_session.refresh(db_log) # Refresh to get the run_id
+    test_db_session.refresh(db_log) 
 
-    # Mock BusEmulator for successful simulation
     mock_bus_emulator_class = mocker.patch("api.routers.emulator_log.BusEmulator", autospec=True)
     mock_emulator_instance = mock_bus_emulator_class.return_value
     mock_emulator_instance.run_simulation.return_value = {
         "status": "Success",
         "optimization_details": {
-            "status": "Success", # Added 'status' key here
+            "status": "Success",
             "message": "Simulation ran perfectly",
-            "total_buses": 5 # This field will be dropped by Pydantic schema
+            "total_buses": 5 
         }
     }
 
@@ -216,22 +187,15 @@ def test_update_emulator_log_and_run_simulation_patch_success(
     assert response.json()["status"] == RunStatus.COMPLETED.value
     assert response.json()["optimization_details"]["status"] == "Success"
     assert response.json()["optimization_details"]["message"] == "Simulation ran perfectly"
-    # Removed assertion for 'total_buses' as it's not in OptimizationDetailsRead schema
-    # assert response.json()["optimization_details"]["total_buses"] == 5 
-
-    # Verify the database state
+    
     updated_db_log = test_db_session.query(EmulatorLog).filter(EmulatorLog.run_id == db_log.run_id).first()
     assert updated_db_log.status == RunStatus.COMPLETED.value
     assert updated_db_log.optimization_details_dict["status"] == "Success"
     assert updated_db_log.optimization_details_dict["message"] == "Simulation ran perfectly"
-    # Verify in the database that total_buses might still be there if the hybrid property handles it,
-    # but the API response (Pydantic model) won't expose it.
-    # If optimization_details_dict is directly assigned the mock return value, total_buses would be present in DB.
     assert updated_db_log.optimization_details_dict.get("total_buses") == 5
 
 
 def test_read_emulator_logs(client_with_db: TestClient, test_db_session: Session):
-    """Tests retrieving multiple emulator log entries."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
 
@@ -250,7 +214,6 @@ def test_read_emulator_logs(client_with_db: TestClient, test_db_session: Session
     assert logs_data[1]["status"] == RunStatus.FAILED.value
 
 def test_read_emulator_log_by_id(client_with_db: TestClient, test_db_session: Session):
-    """Tests retrieving a single emulator log entry by ID."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
 
@@ -266,13 +229,11 @@ def test_read_emulator_log_by_id(client_with_db: TestClient, test_db_session: Se
     assert log_data["status"] == RunStatus.RUNNING.value
 
 def test_read_emulator_log_not_found(client_with_db: TestClient):
-    """Tests retrieving a non-existent emulator log entry."""
     response = client_with_db.get("/emulator_logs/9999")
     assert response.status_code == 404
     assert response.json()["detail"] == "Emulator log not found"
 
 def test_update_emulator_log_status(client_with_db: TestClient, test_db_session: Session):
-    """Tests updating the status of an emulator log entry."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
 
@@ -293,7 +254,6 @@ def test_update_emulator_log_status(client_with_db: TestClient, test_db_session:
 
 
 def test_update_emulator_log_optimization_details(client_with_db: TestClient, test_db_session: Session):
-    """Tests updating the optimization details of an emulator log entry."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
 
@@ -321,7 +281,6 @@ def test_update_emulator_log_optimization_details(client_with_db: TestClient, te
 
 
 def test_delete_emulator_log(client_with_db: TestClient, test_db_session: Session):
-    """Tests deleting an emulator log entry."""
     test_db_session.query(EmulatorLog).delete()
     test_db_session.commit()
 
@@ -336,7 +295,6 @@ def test_delete_emulator_log(client_with_db: TestClient, test_db_session: Sessio
     assert test_db_session.query(EmulatorLog).count() == 0
 
 def test_delete_emulator_log_not_found(client_with_db: TestClient):
-    """Tests deleting a non-existent emulator log entry."""
     response = client_with_db.delete("/emulator_logs/9999")
     assert response.status_code == 404
     assert response.json()["detail"] == "Emulator log not found"

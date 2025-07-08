@@ -7,7 +7,6 @@ from api.main import app
 from api.models import Base, BusType, Bus, Block
 from api.database import get_db
 
-# Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -28,13 +27,11 @@ def db_session(setup_db):
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Clear existing data
     session.query(Bus).delete()
     session.query(Block).delete()
     session.query(BusType).delete()
     session.commit()
 
-    # Add test bus type
     test_type = BusType(type_id=1, name="Double Decker", capacity=80)
     session.add(test_type)
     session.commit()
@@ -94,17 +91,14 @@ def test_update_bus_type(client):
 
 
 def test_delete_bus_type(client, db_session):
-    # First create a bus type with no dependencies
     new_type = BusType(type_id=2, name="Temp Type", capacity=10)
     db_session.add(new_type)
     db_session.commit()
 
-    # Now delete it
     response = client.delete("/bus-types/2")
     assert response.status_code == 200
     assert response.json()["message"] == "Bus type deleted successfully"
 
-    # Verify it's gone
     response = client.get("/bus-types/2")
     assert response.status_code == 404
 
@@ -113,7 +107,7 @@ def test_duplicate_bus_type_name(client):
     response = client.post(
         "/bus-types/",
         json={
-            "name": "Double Decker",  # Duplicate of existing type
+            "name": "Double Decker",  
             "capacity": 30,
         },
     )
@@ -122,10 +116,8 @@ def test_duplicate_bus_type_name(client):
 
 
 def test_delete_bus_type_with_dependencies(client, db_session):
-    # First create dependencies
     from api.models import Garage, Operator, Bus
 
-    # Create required dependencies
     garage = Garage(
         garage_id=1, name="Test Garage", capacity=10, latitude=0, longitude=0
     )
@@ -133,18 +125,15 @@ def test_delete_bus_type_with_dependencies(client, db_session):
     db_session.add_all([garage, operator])
     db_session.commit()
 
-    # Create a bus that depends on bus type 1
     test_bus = Bus(
         bus_id="BUS001", reg_num="TEST001", bus_type_id=1, garage_id=1, operator_id=1
     )
     db_session.add(test_bus)
     db_session.commit()
 
-    # Now try to delete the bus type
     response = client.delete("/bus-types/1")
     assert response.status_code == 400
     assert "Cannot delete bus type" in response.json()["detail"]
 
-    # Verify bus type still exists
     response = client.get("/bus-types/1")
     assert response.status_code == 200

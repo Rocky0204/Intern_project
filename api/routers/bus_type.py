@@ -11,7 +11,6 @@ router = APIRouter(prefix="/bus-types", tags=["bus_types"])
 
 @router.post("/", response_model=BusTypeRead)
 def create_bus_type(bus_type: BusTypeCreate, db: Session = Depends(get_db)):
-    # Check if bus type with same name already exists
     existing_type = db.query(BusType).filter(BusType.name == bus_type.name).first()
     if existing_type:
         raise HTTPException(
@@ -49,7 +48,6 @@ def update_bus_type(
 
     update_data = bus_type.model_dump(exclude_unset=True)
 
-    # Check if updating to an existing bus type name
     if "name" in update_data:
         existing = (
             db.query(BusType)
@@ -75,7 +73,6 @@ def delete_bus_type(type_id: int, db: Session = Depends(get_db)):
     if db_bus_type is None:
         raise HTTPException(status_code=404, detail="Bus type not found")
 
-    # Check if bus type has any dependent records
     has_buses = db.query(Bus).filter(Bus.bus_type_id == type_id).first() is not None
     has_blocks = (
         db.query(Block).filter(Block.bus_type_id == type_id).first() is not None

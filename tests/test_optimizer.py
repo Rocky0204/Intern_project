@@ -1,15 +1,11 @@
-# tests/test_optimizer.py
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import time, datetime, timedelta
 
-# Import the main FastAPI app
 from api.main import app
 
-# Import database dependency and models
 from api.database import get_db
 from api.models import (
     Base, StopArea, StopPoint, BusType, Bus, Demand, Route, RouteDefinition,
@@ -18,23 +14,17 @@ from api.models import (
 )
 from api.schemas import EmulatorLogRead, RunStatus # Import RunStatus from schemas
 
-# In-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_pluto.db"
 
-# Create a new engine for testing
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Fixture to provide a database session for tests
 @pytest.fixture(scope="function", name="db_session")
 def db_session_fixture():
-    """
-    Fixture that provides a database session for testing.
-    It creates tables before tests and drops them after each test to ensure isolation.
-    """
-    Base.metadata.create_all(bind=engine)  # Create tables
+   
+    Base.metadata.create_all(bind=engine)  
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
@@ -43,91 +33,73 @@ def db_session_fixture():
         yield session
     finally:
         session.close()
-        transaction.rollback()  # Rollback changes after test
+        transaction.rollback() 
         connection.close()
-        Base.metadata.drop_all(bind=engine) # Drop tables after each test
+        Base.metadata.drop_all(bind=engine) 
 
-# Fixture to provide a TestClient for FastAPI
 @pytest.fixture(name="client")
 def client_fixture(db_session: Session):
-    """
-    Fixture that provides a TestClient for FastAPI,
-    with the database dependency overridden to use the test session.
-    """
+   
     def override_get_db():
         try:
             yield db_session
         finally:
-            db_session.close() # Ensure session is closed after use
+            db_session.close() 
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
-    app.dependency_overrides.clear() # Clear overrides after test
+    app.dependency_overrides.clear() 
 
 def setup_optimizer_test_data(db: Session):
-    """
-    Sets up dummy data required for the frequency optimizer.
-    This data is designed to allow the optimizer to find a feasible solution.
-    """
-    # Clear existing data to ensure a clean state for each test
+   
     for table in reversed(Base.metadata.sorted_tables):
         db.execute(table.delete())
     db.commit()
 
-    # Create Operator
     op1 = Operator(operator_code="OP1", name="Test Operator 1")
     db.add(op1)
-    db.flush() # Flush to get operator_id
+    db.flush() 
 
-    # Create Line
     line1 = Line(line_name="Test Line 1", operator_id=op1.operator_id)
     db.add(line1)
-    db.flush() # Flush to get line_id
+    db.flush() 
 
-    # Create Service
     service1 = Service(service_code="SVC1", name="Test Service 1", operator_id=op1.operator_id, line_id=line1.line_id)
     db.add(service1)
-    db.flush() # Flush to get service_id
+    db.flush() 
 
-    # Create StopAreas
     sa1 = StopArea(stop_area_code=1001, admin_area_code="ADM001", name="Central Station", is_terminal=True)
     sa2 = StopArea(stop_area_code=1002, admin_area_code="ADM002", name="Downtown Plaza", is_terminal=False)
     sa3 = StopArea(stop_area_code=1003, admin_area_code="ADM003", name="Uptown Market", is_terminal=True)
     db.add_all([sa1, sa2, sa3])
     db.flush()
 
-    # Create StopPoints (linked to StopAreas)
     sp1 = StopPoint(atco_code=1, name="Stop A", latitude=51.5, longitude=-0.1, stop_area_code=sa1.stop_area_code)
     sp2 = StopPoint(atco_code=2, name="Stop B", latitude=51.51, longitude=-0.11, stop_area_code=sa2.stop_area_code)
     sp3 = StopPoint(atco_code=3, name="Stop C", latitude=51.52, longitude=-0.12, stop_area_code=sa3.stop_area_code)
     db.add_all([sp1, sp2, sp3])
     db.flush()
 
-    # Create BusTypes
     bt_small = BusType(name="Small Bus", capacity=20)
     bt_large = BusType(name="Large Bus", capacity=50)
     db.add_all([bt_small, bt_large])
     db.flush()
 
-    # Create Garage (required for Bus model)
     garage1 = Garage(name="Main Depot", capacity=100, latitude=51.49, longitude=-0.15)
     db.add(garage1)
     db.flush()
 
-    # Create Buses
     bus1 = Bus(bus_id="B001", reg_num="REG1001", bus_type_id=bt_small.type_id, garage_id=garage1.garage_id, operator_id=op1.operator_id)
     bus2 = Bus(bus_id="B002", reg_num="REG1002", bus_type_id=bt_large.type_id, garage_id=garage1.garage_id, operator_id=op1.operator_id)
     db.add_all([bus1, bus2])
     db.flush()
 
-    # Create Routes
     route1 = Route(name="Route A-C", operator_id=op1.operator_id, description="Route from A to C")
     route2 = Route(name="Route C-A", operator_id=op1.operator_id, description="Route from C to A")
     db.add_all([route1, route2])
     db.flush()
 
-    # Create RouteDefinitions (linking routes to stop points)
     rd1_1 = RouteDefinition(route_id=route1.route_id, sequence=1, stop_point_id=sp1.atco_code)
     rd1_2 = RouteDefinition(route_id=route1.route_id, sequence=2, stop_point_id=sp2.atco_code)
     rd1_3 = RouteDefinition(route_id=route1.route_id, sequence=3, stop_point_id=sp3.atco_code)
@@ -139,7 +111,6 @@ def setup_optimizer_test_data(db: Session):
     db.add_all([rd2_1, rd2_2, rd2_3])
     db.flush()
 
-    # Create JourneyPatterns (linking to routes, services, lines, operators)
     jp1 = JourneyPattern(
         jp_id=1, jp_code="JP001", name="JP A to C",
         route_id=route1.route_id, service_id=service1.service_id,
@@ -153,7 +124,6 @@ def setup_optimizer_test_data(db: Session):
     db.add_all([jp1, jp2])
     db.flush()
 
-    # Create JourneyPatternDefinitions (linking JPs to stop points and times)
     jpd1_1 = JourneyPatternDefinition(jp_id=jp1.jp_id, sequence=1, stop_point_id=sp1.atco_code, arrival_time=time(7,0), departure_time=time(7,0))
     jpd1_2 = JourneyPatternDefinition(jp_id=jp1.jp_id, sequence=2, stop_point_id=sp2.atco_code, arrival_time=time(7,15), departure_time=time(7,15))
     jpd1_3 = JourneyPatternDefinition(jp_id=jp1.jp_id, sequence=3, stop_point_id=sp3.atco_code, arrival_time=time(7,30), departure_time=time(7,30))
@@ -165,7 +135,6 @@ def setup_optimizer_test_data(db: Session):
     db.add_all([jpd2_1, jpd2_2, jpd2_3])
     db.flush()
 
-    # Create Demands
     demand1 = Demand(origin=sa1.stop_area_code, destination=sa3.stop_area_code, count=15.0, start_time=time(7, 45), end_time=time(8, 15))
     demand2 = Demand(origin=sa3.stop_area_code, destination=sa1.stop_area_code, count=25.0, start_time=time(8, 45), end_time=time(9, 15))
     demand3 = Demand(origin=sa1.stop_area_code, destination=sa2.stop_area_code, count=5.0, start_time=time(9, 0), end_time=time(9, 30))
@@ -176,10 +145,7 @@ def setup_optimizer_test_data(db: Session):
 
 
 def test_run_frequency_optimization_success(client: TestClient, db_session: Session):
-    """
-    Tests the successful execution of the frequency optimization API.
-    Expects EmulatorLogRead as response.
-    """
+    
     setup_optimizer_test_data(db_session)
 
     response = client.post(
@@ -197,25 +163,16 @@ def test_run_frequency_optimization_success(client: TestClient, db_session: Sess
 
     assert response.status_code == 202
     
-    # Assert the structure and content of the EmulatorLogRead response
     log_entry = EmulatorLogRead(**response.json())
 
     assert log_entry.run_id is not None
-    assert log_entry.status == RunStatus.COMPLETED # Changed from SUCCESS to COMPLETED
+    assert log_entry.status == RunStatus.COMPLETED 
     assert log_entry.started_at is not None
     assert log_entry.last_updated is not None
 
-    # Check that detailed optimization results are logged to console, not in API response.
-    # This part cannot be directly asserted via API response, but you will see it in your terminal.
-    # Example: print(response.text) if you want to see the basic response.
-
 
 def test_run_frequency_optimization_no_data(client: TestClient, db_session: Session):
-    """
-    Tests the frequency optimization API when no data is available.
-    It should return a 'FAILED' status in the EmulatorLogRead response.
-    """
-    # Ensure database is empty for this test
+    
     for table in reversed(Base.metadata.sorted_tables):
         db_session.execute(table.delete())
     db_session.commit()
@@ -233,11 +190,11 @@ def test_run_frequency_optimization_no_data(client: TestClient, db_session: Sess
         }
     )
 
-    assert response.status_code == 202 # Still 202 because the API call itself succeeds
+    assert response.status_code == 202 
     log_entry = EmulatorLogRead(**response.json())
 
     assert log_entry.run_id is not None
-    assert log_entry.status == RunStatus.FAILED # Expect failed status
+    assert log_entry.status == RunStatus.FAILED 
     assert log_entry.started_at is not None
     assert log_entry.last_updated is not None
 

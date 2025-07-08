@@ -1,4 +1,3 @@
-# api/models.py
 from datetime import time, datetime
 from enum import IntEnum
 import json
@@ -8,7 +7,6 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy import Column, Integer, String, DateTime, Time, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 
-# This is the ONLY Base definition that should exist.
 class Base(DeclarativeBase):
     pass
 
@@ -294,7 +292,6 @@ class Demand(Base):
     end_time: Mapped[time] = mapped_column(primary_key=True)
 
 
-# ──────────────── EmulatorLog ────────────────
 class RunStatus(IntEnum):
     QUEUED = 0
     RUNNING = 1
@@ -306,30 +303,26 @@ class EmulatorLog(Base):
     __tablename__ = "emulator_log"
 
     run_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    status: Mapped[int] = mapped_column(Integer) # Stores RunStatus enum value
+    status: Mapped[int] = mapped_column(Integer)  
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
-    optimization_details: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Stores JSON string
+    optimization_details: Mapped[Optional[str]] = mapped_column(String, nullable=True) 
 
-    # Hybrid property to convert the JSON string to a dictionary and vice-versa
     @hybrid_property
     def optimization_details_dict(self) -> Optional[Dict[str, Any]]:
         if self.optimization_details:
             try:
                 return json.loads(self.optimization_details)
             except json.JSONDecodeError:
-                # Handle cases where the string might not be valid JSON
                 return None
         return None
 
     @optimization_details_dict.setter
     def optimization_details_dict(self, value: Optional[Dict[str, Any]]):
         if value is not None:
-            # Ensure the value is a dictionary before dumping
             if isinstance(value, dict):
                 self.optimization_details = json.dumps(value)
             else:
-                # If not a dict, set to None or handle error as appropriate
                 self.optimization_details = None
         else:
             self.optimization_details = None

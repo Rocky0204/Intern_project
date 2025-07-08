@@ -15,7 +15,6 @@ from api.models import (
 )
 from api.database import get_db
 
-# Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -36,7 +35,6 @@ def db_session(setup_db):
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
 
-    # Clear existing data
     session.query(RouteDefinition).delete()
     session.query(JourneyPattern).delete()
     session.query(Route).delete()
@@ -45,12 +43,10 @@ def db_session(setup_db):
     session.query(StopArea).delete()
     session.commit()
 
-    # Create test operator
     test_operator = Operator(operator_id=1, operator_code="OP1", name="Test Operator")
     session.add(test_operator)
     session.commit()
 
-    # Create test route
     test_route = Route(
         route_id=1, name="Route 101", operator_id=1, description="Main city route"
     )
@@ -116,17 +112,14 @@ def test_update_route(client):
 
 
 def test_delete_route(client, db_session):
-    # First create a route with no dependencies
     new_route = Route(route_id=2, name="Temp Route", operator_id=1)
     db_session.add(new_route)
     db_session.commit()
 
-    # Now delete it
     response = client.delete("/routes/2")
     assert response.status_code == 200
     assert response.json()["message"] == "Route deleted successfully"
 
-    # Verify it's gone
     response = client.get("/routes/2")
     assert response.status_code == 404
 
@@ -136,7 +129,7 @@ def test_create_route_invalid_operator(client):
         "/routes/",
         json={
             "name": "Invalid Route",
-            "operator_id": 999,  # Non-existent operator
+            "operator_id": 999,  
             "description": "Should fail",
         },
     )
@@ -145,7 +138,6 @@ def test_create_route_invalid_operator(client):
 
 
 def test_delete_route_with_dependencies(client, db_session):
-    # Create required dependencies
     stop_area = StopArea(
         stop_area_code=1, admin_area_code="A1", name="Test Area", is_terminal=True
     )
@@ -155,16 +147,13 @@ def test_delete_route_with_dependencies(client, db_session):
     db_session.add_all([stop_area, stop_point])
     db_session.commit()
 
-    # Create a route definition that depends on route 1
     route_def = RouteDefinition(route_id=1, stop_point_id=1, sequence=1)
     db_session.add(route_def)
     db_session.commit()
 
-    # Now try to delete the route
     response = client.delete("/routes/1")
     assert response.status_code == 400
     assert "Cannot delete route" in response.json()["detail"]
 
-    # Verify route still exists
     response = client.get("/routes/1")
     assert response.status_code == 200
